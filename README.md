@@ -1,2 +1,1 @@
-# secure-programming-project
-A project implemented in Secure Programming course.
+A password manager project implemented in Secure Programming course.
