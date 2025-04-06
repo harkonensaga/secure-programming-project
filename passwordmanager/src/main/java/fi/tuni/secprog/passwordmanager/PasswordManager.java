@@ -1,0 +1,162 @@
+package fi.tuni.secprog.passwordmanager;
+
+import java.security.SecureRandom;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PasswordManager {
+
+    private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
+    private static final String DIGITS = "0123456789";
+    private static final String SYMBOLS = "!@#$%^&*";
+
+    private static final String ALL_CHARS = UPPER + LOWER + DIGITS + SYMBOLS;
+
+    private static final SecureRandom random = new SecureRandom();
+
+    /*
+     * A function to generate a random password of a given length.
+     */
+    public static String generatePassword(int length) {
+        StringBuilder password = new StringBuilder(length);
+
+        // Ensure at least one char from each category
+        password.append(UPPER.charAt(random.nextInt(UPPER.length())));
+        password.append(LOWER.charAt(random.nextInt(LOWER.length())));
+        password.append(DIGITS.charAt(random.nextInt(DIGITS.length())));
+        password.append(SYMBOLS.charAt(random.nextInt(SYMBOLS.length())));
+
+        // Fill the rest with random characters from all categories
+        for (int i = 4; i < length; i++) {
+            password.append(ALL_CHARS.charAt(random.nextInt(ALL_CHARS.length())));
+        }
+        return shuffleString(password.toString());
+    }
+
+    /*
+     * A function to shuffle a string.
+     */
+    private static String shuffleString(String input) {
+        char[] a = input.toCharArray();
+        for (int i = a.length - 1; i > 0; i--) {
+            int index = random.nextInt(i + 1);
+            // Swap
+            char temp = a[i];
+            a[i] = a[index];
+            a[index] = temp;
+        }
+        return new String(a);
+    }
+
+    /*
+     * A function to get logged in user's all websites from the database.
+     */
+    public static List<String> getWebsites() {
+        String sql = "SELECT site_name " +
+                     "FROM credentials " +
+                     "WHERE user_id = ?";
+        try (Connection conn = DatabaseHelper.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, UserAuthentication.getUserId());
+            ResultSet rs = pstmt.executeQuery();
+
+            // Return the websites
+            ArrayList<String> websites = new ArrayList<>();
+            while (rs.next()) {
+                websites.add(rs.getString("site_name"));
+            }
+            return websites;
+        } catch (SQLException e) {
+            System.err.println("Error in getting the websites: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /*
+     * A function to get username and password for a certain website from the database.
+     */
+    public static List<String> getPassword(String siteName) {
+        String sql = "SELECT site_username, site_password " +
+                     "FROM credentials " +
+                     "WHERE user_id = ? AND site_name = ?";
+        try (Connection conn = DatabaseHelper.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, UserAuthentication.getUserId());
+            pstmt.setString(2, siteName);
+            ResultSet rs = pstmt.executeQuery();
+
+            String username = rs.getString("site_username");
+            String decryptedPass = AESUtil.decrypt(rs.getString("site_password"));
+            return List.of(username, decryptedPass);
+        } catch (SQLException e) {
+            System.err.println("Error in retrieveing the password: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error in decrypting the password: " + e.getMessage());
+        }
+        return new ArrayList<>();
+    }
+
+
+    /*
+     * A function to check if the user already has credentials for the site.
+     */
+    private static boolean doCredentialsExist(String siteName) {
+        String sql1 = "SELECT site_name " +
+                      "FROM credentials " +
+                      "WHERE user_id = ? AND site_name = ?";
+        try (Connection conn = DatabaseHelper.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql1)) {
+
+            pstmt.setInt(1, UserAuthentication.getUserId());
+            pstmt.setString(2, siteName);
+
+            // Execute the query and return false if user already has credentials for the site
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            System.err.println("Error in checking the credentials: " + e.getMessage());
+            return true;
+        }
+    }
+
+    /*
+     * A function to save a new password to the database.
+     */
+    public static boolean storeKey(String siteName, String username, String password) {
+        // Check if the user already has credentials for the site
+        if (doCredentialsExist(siteName)) {
+            System.out.println("User already has credentials for the site.");
+            return false;
+        }
+
+        String sql2 = "INSERT INTO credentials " +
+                      "(user_id, site_name, site_username, site_password) " +
+                      "VALUES (?, ?, ?, ?)";
+    
+        try (Connection conn = DatabaseHelper.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql2)) {
+
+            // Encrypt the password
+            String encryptedPass = AESUtil.encrypt(password);
+            
+            pstmt.setInt(1, UserAuthentication.getUserId());
+            pstmt.setString(2, siteName);
+            pstmt.setString(3, username);
+            pstmt.setString(4, encryptedPass);
+
+            // Execute the query and return true if the update was successful
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error in storing the key: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error in encrypting the password: " + e.getMessage());
+        }
+        return false;
+    }
+}

@@ -1,20 +1,25 @@
 package fi.tuni.secprog.passwordmanager;
 
 import java.io.File;
+import javafx.util.Duration;
+import java.util.List;
 
+import javafx.animation.PauseTransition;
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.application.Application;
-import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
+import java.awt.datatransfer.StringSelection;
+import java.awt.Toolkit;
 
 /**
  * Password manager application
@@ -22,17 +27,44 @@ import javafx.scene.control.TextField;
 public class App extends Application {
     private Stage stage;
 
-    private UserAuthentication userAuth = new UserAuthentication();
-    private DatabaseHelper database = new DatabaseHelper();
+    /*
+     * Creates a label with the given text.
+     */
+    private Label createHeaderLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-background-color: #AF69EE; -fx-font-size: 12pt;");
+        label.setPrefSize(100, 25);
+        return label;
+    }
 
     /*
-     * Creates a big button with the given text
+     * Creates a label with the given text.
+     */
+    private Label createLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-font-size: 10pt; -fx-padding: 5px 10px;");
+        label.setPrefSize(80, 25);
+        return label;
+    }
+
+    /*
+     * Creates a big button with the given text.
      */
     private Button createBigBtn(String text) {
         Button bigBtn = new Button(text);
         bigBtn.setStyle("-fx-font-size: 16pt; -fx-padding: 10px 20px;");
         bigBtn.setPrefSize(200, 50);
         return bigBtn;
+    }
+
+    /*
+     * Creates a small button with the given text.
+     */
+    private Button createSmallBtn(String text) {
+        Button smallBtn = new Button(text);
+        smallBtn.setStyle("-fx-font-size: 8pt; -fx-padding: 5px 10px;");
+        smallBtn.setPrefSize(70, 15);
+        return smallBtn;
     }
 
     /*
@@ -53,6 +85,8 @@ public class App extends Application {
         logOutBtn.setPrefSize(80, 35);
         logOutBtn.setStyle("-fx-font-size: 12pt; -fx-padding: 2px; -fx-background-radius: 25%;");
         logOutBtn.setOnAction(e -> {
+            // AESKeyHolder.clearKey();
+            UserAuthentication.clearUserId();
             start(stage);
         });
         return logOutBtn;
@@ -70,8 +104,6 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) {
-        // Initialize the database
-        database.initializeDatabase();
 
         // Create buttons for signing in and logging in
         ImageView keyIcon = getIcon("keyIcon");
@@ -82,7 +114,7 @@ public class App extends Application {
 
         // Set layout
         VBox root = new VBox(20, keyIcon, logInBtn, signInBtn);
-        root.setPadding(new Insets(10, 10, 10, 10));
+        root.setPadding(new Insets(20, 30, 20, 30));
         root.setAlignment(Pos.CENTER);
         Scene scene = new Scene(root, 420, 620);
         stage.setScene(scene);
@@ -97,15 +129,13 @@ public class App extends Application {
     private void loginScene() {
         /// Create text fields for username and password
         TextField usernameField = new TextField();
-        usernameField.setPrefWidth(200);
 
         // Use PasswordField for password to hide input text
         PasswordField passField = new PasswordField();
-        passField.setPrefWidth(200);
 
         Button loginBtn = createBigBtn("Log In");
         loginBtn.setOnAction(e -> {
-            boolean isSuccesful = userAuth.authenticateUser(usernameField.getText(), passField.getText());
+            boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(), passField.getText());
             if (isSuccesful) {
                 mainScene();
             } else {
@@ -126,7 +156,7 @@ public class App extends Application {
             createLabeledField("Password:", passField), 
             loginBtn);
 
-        root.setPadding(new Insets(10, 10, 10, 10));
+        root.setPadding(new Insets(20, 30, 20, 30));
         root.setAlignment(Pos.TOP_CENTER);
         Scene loginScene = new Scene(root, 420, 620);
         stage.setScene(loginScene);
@@ -137,13 +167,10 @@ public class App extends Application {
      */
     private void signInScene() {
         TextField usernameField = new TextField();
-        usernameField.setPrefWidth(200);
         
         // Use PasswordField for password to hide input text
         PasswordField passField = new PasswordField();
-        passField.setPrefWidth(200);
         PasswordField passRepetitionField = new PasswordField();
-        passRepetitionField.setPrefWidth(200);
 
         Button signinBtn = createBigBtn("Sign In");
         signinBtn.setOnAction(e -> {
@@ -151,7 +178,7 @@ public class App extends Application {
                 // THIS SHOULD BE A LABEL
                 System.out.println("Passwords don't match");
             } else {
-                boolean isSuccesful = userAuth.registerUser(usernameField.getText(), passField.getText());
+                boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(), passField.getText());
                 if (isSuccesful) {
                     loginScene();
                     // THIS SHOULD BE A LABEL
@@ -175,8 +202,7 @@ public class App extends Application {
             createLabeledField("Password:", passField), 
             createLabeledField("Repeat Password:", passRepetitionField), 
             signinBtn);
-
-        root.setPadding(new Insets(10, 10, 10, 10));
+        root.setPadding(new Insets(20, 30, 20, 30));
         root.setAlignment(Pos.TOP_CENTER);
         Scene signInScene = new Scene(root, 420, 620);
         stage.setScene(signInScene);
@@ -198,21 +224,55 @@ public class App extends Application {
 
         // Set layout
         VBox root = new VBox(20, mainTopBox, keysBtn, addBtn);
-        root.setPadding(new Insets(10, 10, 10, 10));
+        root.setPadding(new Insets(20, 30, 20, 30));
         root.setAlignment(Pos.CENTER);
         Scene scene = new Scene(root, 420, 620);
         stage.setScene(scene);
     }
 
     /*
-     * Creates the scene where the keys are shown
+     * Creates the scene where the credentials are shown. Website name and
+     * username are shown, and the password can be copied to clipboard.
      */
     private void keysScene() {
-        // Here, reate a list of keys
+        // Create a list of keys and present them in a VBox with headers
+        VBox keysVBox = new VBox(5);
+        keysVBox.setPadding(new Insets(5, 5, 5, 5));
+        HBox headerBox = new HBox(10);
+        headerBox.setAlignment(Pos.CENTER);
+        Label websiteHeader = createLabel("Website");
+        Label usernameHeader = createLabel("Username");
+        Label passwordHeader = createLabel("Password");
+        headerBox.getChildren().addAll(websiteHeader, usernameHeader, passwordHeader);
+        keysVBox.getChildren().addAll(headerBox);
 
-        // Create a VBox for the keys
-        VBox keysVBox = new VBox(10);
-        keysVBox.setPadding(new Insets(10, 10, 10, 10));
+        for (String website : PasswordManager.getWebsites()) {
+            // Get the credentials for the website
+            List<String> credentials = PasswordManager.getPassword(website);
+
+            // Create a button to copy the password to clipboard
+            Button copyPasswordBtn = createSmallBtn("Copy");
+            copyPasswordBtn.setOnAction(e -> {
+                String password = credentials.get(1);
+                StringSelection stringSelection = new StringSelection(password);
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(stringSelection, null);
+                System.out.println("Copied to clipboard!");
+
+                // Clear clipboard after 10 seconds
+                PauseTransition pause = new PauseTransition(Duration.seconds(10));
+                pause.setOnFinished(event -> {
+                    StringSelection empty = new StringSelection("");
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(empty, null);
+                    System.out.println("Clipboard cleared!");
+                });
+                pause.play();
+            });
+            HBox infoBox = new HBox(40, createLabel(website),
+                                    createLabel(credentials.get(0)),
+                                    copyPasswordBtn);
+            infoBox.setAlignment(Pos.CENTER);
+            keysVBox.getChildren().add(infoBox);
+        }
 
         // Set layout
         Button returnBtn = createReturnBtn();
@@ -226,26 +286,47 @@ public class App extends Application {
     }
 
     /*
-     * Creates the scene where a new key can be added
+     * Creates the scene where a new key can be added.
      */
     private void addKeyScene() {
         // Create text fileds
         TextField websiteField = new TextField();
-        websiteField.setPrefWidth(200);
         TextField usernameField = new TextField();
-        usernameField.setPrefWidth(200);
+        TextField passLength = new TextField();
+        passLength.setMaxWidth(60);
 
         // Use PasswordField for password to hide input text
         PasswordField passField = new PasswordField();
-        passField.setPrefWidth(200);
-
-        // HOX
-        // OR suggest a strong password and make it possible to copy it to clipboard
-        // HOX
+        Button generatePass = createSmallBtn("Generate");
+        generatePass.setOnAction(e -> {
+            // Generate a password and set it to the password field
+            try {
+                int length = Integer.parseInt(passLength.getText());
+                if (length < 8) {
+                    System.out.println("Password length must be at least 8 characters.");
+                    return;
+                } else if (length > 20) {
+                    System.out.println("Password length must be at most 20 characters.");
+                    return;
+                }
+                passField.setText(PasswordManager.generatePassword(length));
+            } catch (NumberFormatException ex) {
+                System.out.println("Invalid input for password length. Please enter a valid number.");
+            }
+        });
 
         Button addKeyBtn = createBigBtn("Add key");
         addKeyBtn.setOnAction(e -> {
+            String website = websiteField.getText();
+            String username = usernameField.getText();
+            String password = passField.getText();
+            if (website.isEmpty() || username.isEmpty() || password.isEmpty()) {
+                System.out.println("Please fill in all fields.");
+                return;
+            }
             // Add the key to the database
+            PasswordManager.storeKey(website, username, password);
+            keysScene();
         });
 
         // Set layout
@@ -254,14 +335,16 @@ public class App extends Application {
         HBox addKeyTopBox = new HBox(20, returnBtn);
         addKeyTopBox.setAlignment(Pos.TOP_LEFT);
 
-        // Create VBox with labeled fields for key name, password, and the add key button
+        // Create VBox with labeled fields and the add key button
         VBox root = new VBox(20, addKeyTopBox, 
             createLabeledField("Website:", websiteField),
-            createLabeledField("Username:", usernameField), 
-            createLabeledField("Password:", passField), 
+            createLabeledField("Username:", usernameField),
+            createLabeledField("Password length:", passLength),
+            createLabeledField("Password:", passField),
+            generatePass,
             addKeyBtn);
 
-        root.setPadding(new Insets(10, 10, 10, 10));
+        root.setPadding(new Insets(20, 30, 20, 30));
         root.setAlignment(Pos.TOP_CENTER);
         Scene addKeyScene = new Scene(root, 420, 620);
         stage.setScene(addKeyScene);
@@ -286,6 +369,9 @@ public class App extends Application {
 
 
     public static void main(String[] args) {
+        // Initialize the database
+        DatabaseHelper.initializeDatabase();
+
         launch();
     }
 }
