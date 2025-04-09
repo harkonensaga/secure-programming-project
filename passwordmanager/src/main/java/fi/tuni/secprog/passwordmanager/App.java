@@ -139,6 +139,10 @@ public class App extends Application {
 
         Button loginBtn = createBigBtn("Log In");
         loginBtn.setOnAction(e -> {
+            if (UserAuthentication.isAccountLocked(usernameField.getText())) {
+                errorField.setText("Account is locked. Try again later.");
+                return;
+            }
             boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
                                                                       passField.getText());
             if (isSuccesful) {
