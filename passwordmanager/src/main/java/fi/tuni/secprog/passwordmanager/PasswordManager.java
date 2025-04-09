@@ -20,7 +20,7 @@ public class PasswordManager {
     private static final SecureRandom random = new SecureRandom();
 
     /*
-     * A function to generate a random password of a given length.
+     * A function to generate a cyber secure random password of a given length.
      */
     public static String generatePassword(int length) {
         StringBuilder password = new StringBuilder(length);
@@ -73,14 +73,14 @@ public class PasswordManager {
             return websites;
         } catch (SQLException e) {
             System.err.println("Error in getting the websites: " + e.getMessage());
-            return new ArrayList<>();
+            return null;
         }
     }
 
     /*
      * A function to get username and password for a certain website from the database.
      */
-    public static List<String> getPassword(String siteName) {
+    public static List<String> getCredentials(String siteName) {
         String sql = "SELECT site_username, site_password " +
                      "FROM credentials " +
                      "WHERE user_id = ? AND site_name = ?";
@@ -90,17 +90,16 @@ public class PasswordManager {
             pstmt.setString(2, siteName);
             ResultSet rs = pstmt.executeQuery();
 
-            String username = rs.getString("site_username");
-            String decryptedPass = AESUtil.decrypt(rs.getString("site_password"));
-            return List.of(username, decryptedPass);
+            String username = AESUtil.decrypt(rs.getString("site_username"));
+            String password = AESUtil.decrypt(rs.getString("site_password"));
+            return List.of(username, password);
         } catch (SQLException e) {
             System.err.println("Error in retrieveing the password: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Error in decrypting the password: " + e.getMessage());
         }
-        return new ArrayList<>();
+        return null;
     }
-
 
     /*
      * A function to check if the user already has credentials for the site.
@@ -141,12 +140,12 @@ public class PasswordManager {
         try (Connection conn = DatabaseHelper.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql2)) {
 
-            // Encrypt the password
+            // Encrypt the credentials before storing them
+            String encryptedUsername = AESUtil.encrypt(username);
             String encryptedPass = AESUtil.encrypt(password);
-            
             pstmt.setInt(1, UserAuthentication.getUserId());
             pstmt.setString(2, siteName);
-            pstmt.setString(3, username);
+            pstmt.setString(3, encryptedUsername);
             pstmt.setString(4, encryptedPass);
 
             // Execute the query and return true if the update was successful
@@ -156,6 +155,57 @@ public class PasswordManager {
             System.err.println("Error in storing the key: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Error in encrypting the password: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /*
+     * A function to update the credentials for a certain website in the database.
+     */
+    public static boolean updateKey(String siteName, String username, String password) {
+        String sql = "UPDATE credentials " +
+                     "SET site_username = ?, site_password = ? " +
+                     "WHERE user_id = ? AND site_name = ?";
+
+        try (Connection conn = DatabaseHelper.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // Encrypt the credentials before storing them
+            String encryptedUsername = AESUtil.encrypt(username);
+            String encryptedPass = AESUtil.encrypt(password);
+            pstmt.setString(1, encryptedUsername);
+            pstmt.setString(2, encryptedPass);
+            pstmt.setInt(3, UserAuthentication.getUserId());
+            pstmt.setString(4, siteName);
+
+            // Execute the query and return true if the update was successful
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error in updating the key: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error in encrypting the password: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /*
+     * A function to delete the credentials for a certain website from the database.
+     */
+    public static boolean deleteKey(String siteName) {
+        String sql = "DELETE FROM credentials " +
+                     "WHERE user_id = ? AND site_name = ?";
+        try (Connection conn = DatabaseHelper.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, UserAuthentication.getUserId());
+            pstmt.setString(2, siteName);
+
+            // Execute the query and return true if the deletion was successful
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error in deleting the key: " + e.getMessage());
         }
         return false;
     }

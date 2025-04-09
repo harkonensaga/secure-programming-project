@@ -1,10 +1,38 @@
 package fi.tuni.secprog.passwordmanager;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import java.security.SecureRandom;
+import java.security.spec.KeySpec;
 import java.util.Base64;
 
 public class AESUtil {
+    private static final int KEY_LENGTH = 256; // AES-256 key
+    private static final int ITERATIONS = 100_000;
+    private static final String ALGORITHM = "PBKDF2WithHmacSHA256";
+
+
+    /*
+     * Generate a random salt for the user's encryption key.
+     */
+    public static String generateSalt() {
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        return Base64.getEncoder().encodeToString(salt);
+    }
+
+    /*
+     * Derive an encryption key from the user's master password and salt.
+     */
+    public static SecretKeySpec deriveKey(String masterPassword, String salt) throws Exception {
+        KeySpec spec = new PBEKeySpec(masterPassword.toCharArray(), salt.getBytes(), ITERATIONS, KEY_LENGTH);
+        SecretKeyFactory factory = SecretKeyFactory.getInstance(ALGORITHM);
+        byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+        return new SecretKeySpec(keyBytes, "AES");
+    }
 
     /*
      * Encrypt data with provided AES key.

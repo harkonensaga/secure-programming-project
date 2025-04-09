@@ -51,8 +51,7 @@ public class UserAuthentication {
             // If the password is correct, set the user_id and save the encryption key
             if (BCrypt.checkpw(password, hashedPassword)) {
                 user_id = rs.getInt("id");
-                System.out.println("User_id: " + user_id);
-                AESKeyHolder.storeKey(EncryptionKeyDerivationUtil.deriveKey(password, rs.getString("salt")));
+                AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
                 return true;
             }
             return false;
@@ -77,7 +76,7 @@ public class UserAuthentication {
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, hashedPassword);
-            pstmt.setString(3, EncryptionKeyDerivationUtil.generateSalt());
+            pstmt.setString(3, AESUtil.generateSalt());
 
             // Execute the query and return true if the query was successful
             int affectedRows = pstmt.executeUpdate();

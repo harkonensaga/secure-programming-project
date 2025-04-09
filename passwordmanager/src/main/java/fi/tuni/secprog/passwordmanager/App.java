@@ -16,6 +16,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.awt.datatransfer.StringSelection;
@@ -26,13 +28,14 @@ import java.awt.Toolkit;
  */
 public class App extends Application {
     private Stage stage;
+    private VBox root;
 
     /*
-     * Creates a label with the given text.
+     * Creates a header type label with the given text.
      */
     private Label createHeaderLabel(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-background-color: #AF69EE; -fx-font-size: 12pt;");
+        label.setStyle("-fx-font-size: 12pt; -fx-alignment: center;");
         label.setPrefSize(100, 25);
         return label;
     }
@@ -42,8 +45,8 @@ public class App extends Application {
      */
     private Label createLabel(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-font-size: 10pt; -fx-padding: 5px 10px;");
-        label.setPrefSize(80, 25);
+        label.setStyle("-fx-font-size: 10pt; -fx-alignment: center;");
+        label.setPrefSize(70, 15);
         return label;
     }
 
@@ -68,24 +71,24 @@ public class App extends Application {
     }
 
     /*
-     * Creates a return button
+     * Creates a return button.
      */
     private Button createReturnBtn() {
         Button returnBtn = new Button("↩");
         returnBtn.setPrefSize(35, 35);
-        returnBtn.setStyle("-fx-font-size: 16pt; -fx-padding: 2px; -fx-background-radius: 25%;");
+        returnBtn.setStyle("-fx-font-size: 16pt; -fx-padding: 2px; -fx-background-radius: 8%;");
         return returnBtn;
     }
 
     /*
-     * Creates a log out button
+     * Creates a log out button.
      */
-    private Button createLogOuBtn() {
+    private Button createLogOutBtn() {
         Button logOutBtn = new Button("Log Out");
         logOutBtn.setPrefSize(80, 35);
-        logOutBtn.setStyle("-fx-font-size: 12pt; -fx-padding: 2px; -fx-background-radius: 25%;");
+        logOutBtn.setStyle("-fx-font-size: 10pt; -fx-padding: 2px; -fx-background-radius: 8%;");
         logOutBtn.setOnAction(e -> {
-            // AESKeyHolder.clearKey();
+            AESKeyHolder.clearKey();
             UserAuthentication.clearUserId();
             start(stage);
         });
@@ -93,7 +96,7 @@ public class App extends Application {
     }
 
     /*
-     * Creates a label and a field with the given label text and text field
+     * Creates a label and a field with the given label text and text field.
      */
     private VBox createLabeledField(String labelText, TextField textField) {
         Label label = new Label(labelText);
@@ -104,6 +107,15 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) {
+        // Create the root layout
+        this.root = new VBox(20);
+        root.setPadding(new Insets(20, 30, 20, 30));
+        root.setAlignment(Pos.TOP_CENTER);
+        Scene scene = new Scene(root, 420, 620);
+        stage.setScene(scene);
+        stage.setTitle("Password Manager");
+        this.stage = stage;
+        stage.show();
 
         // Create buttons for signing in and logging in
         ImageView keyIcon = getIcon("keyIcon");
@@ -113,14 +125,7 @@ public class App extends Application {
         logInBtn.setOnAction(e -> loginScene());
 
         // Set layout
-        VBox root = new VBox(20, keyIcon, logInBtn, signInBtn);
-        root.setPadding(new Insets(20, 30, 20, 30));
-        root.setAlignment(Pos.CENTER);
-        Scene scene = new Scene(root, 420, 620);
-        stage.setScene(scene);
-        stage.setTitle("Password Manager");
-        this.stage = stage;
-        stage.show();
+        root.getChildren().addAll(keyIcon, logInBtn, signInBtn);
     }
 
     /*
@@ -129,18 +134,17 @@ public class App extends Application {
     private void loginScene() {
         /// Create text fields for username and password
         TextField usernameField = new TextField();
-
-        // Use PasswordField for password to hide input text
         PasswordField passField = new PasswordField();
+        Label errorField = new Label("");
 
         Button loginBtn = createBigBtn("Log In");
         loginBtn.setOnAction(e -> {
-            boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(), passField.getText());
+            boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
+                                                                      passField.getText());
             if (isSuccesful) {
                 mainScene();
             } else {
-                // THIS SHOULD BE A LABEL
-                System.out.println("Login failed");
+                errorField.setText("Login failed.");
             }
         });
 
@@ -150,16 +154,12 @@ public class App extends Application {
         HBox loginTopBox = new HBox(20, returnBtn);
         loginTopBox.setAlignment(Pos.TOP_LEFT);
 
-        // Create VBox with labeled fields for username and password, and the login button
-        VBox root = new VBox(20, loginTopBox, 
+        root.getChildren().clear();
+        root.getChildren().addAll(loginTopBox, 
             createLabeledField("Username:", usernameField),
-            createLabeledField("Password:", passField), 
+            createLabeledField("Password:", passField),
+            errorField,
             loginBtn);
-
-        root.setPadding(new Insets(20, 30, 20, 30));
-        root.setAlignment(Pos.TOP_CENTER);
-        Scene loginScene = new Scene(root, 420, 620);
-        stage.setScene(loginScene);
     }
 
     /*
@@ -171,21 +171,18 @@ public class App extends Application {
         // Use PasswordField for password to hide input text
         PasswordField passField = new PasswordField();
         PasswordField passRepetitionField = new PasswordField();
+        Label errorField = new Label("");
 
         Button signinBtn = createBigBtn("Sign In");
         signinBtn.setOnAction(e -> {
             if (!passField.getText().equals(passRepetitionField.getText())) {
-                // THIS SHOULD BE A LABEL
-                System.out.println("Passwords don't match");
+                errorField.setText("Passwords don't match.");
             } else {
                 boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(), passField.getText());
                 if (isSuccesful) {
                     loginScene();
-                    // THIS SHOULD BE A LABEL
-                    System.out.println("User registered successfully");
                 } else {
-                    // THIS SHOULD BE A LABEL
-                    System.out.println("User registration failed");
+                    errorField.setText("User registration failed");
                 }
             }
         });
@@ -196,16 +193,13 @@ public class App extends Application {
         HBox signInTopBox = new HBox(20, returnBtn);
         signInTopBox.setAlignment(Pos.TOP_LEFT);
 
-        // Create VBox with labeled fields
-        VBox root = new VBox(20, signInTopBox, 
+        root.getChildren().clear();
+        root.getChildren().addAll(signInTopBox, 
             createLabeledField("Username:", usernameField), 
             createLabeledField("Password:", passField), 
-            createLabeledField("Repeat Password:", passRepetitionField), 
+            createLabeledField("Repeat Password:", passRepetitionField),
+            errorField,
             signinBtn);
-        root.setPadding(new Insets(20, 30, 20, 30));
-        root.setAlignment(Pos.TOP_CENTER);
-        Scene signInScene = new Scene(root, 420, 620);
-        stage.setScene(signInScene);
     }
 
     /*
@@ -218,16 +212,12 @@ public class App extends Application {
         keysBtn.setOnAction(e -> keysScene());
         addBtn.setOnAction(e -> addKeyScene());
 
-        Button logOutBtn = createLogOuBtn();
+        Button logOutBtn = createLogOutBtn();
         HBox mainTopBox = new HBox(20, logOutBtn);
         mainTopBox.setAlignment(Pos.TOP_RIGHT);
 
-        // Set layout
-        VBox root = new VBox(20, mainTopBox, keysBtn, addBtn);
-        root.setPadding(new Insets(20, 30, 20, 30));
-        root.setAlignment(Pos.CENTER);
-        Scene scene = new Scene(root, 420, 620);
-        stage.setScene(scene);
+        root.getChildren().clear();
+        root.getChildren().addAll(mainTopBox, keysBtn, addBtn);
     }
 
     /*
@@ -240,15 +230,22 @@ public class App extends Application {
         keysVBox.setPadding(new Insets(5, 5, 5, 5));
         HBox headerBox = new HBox(10);
         headerBox.setAlignment(Pos.CENTER);
-        Label websiteHeader = createLabel("Website");
-        Label usernameHeader = createLabel("Username");
-        Label passwordHeader = createLabel("Password");
-        headerBox.getChildren().addAll(websiteHeader, usernameHeader, passwordHeader);
+        Label websiteHeader = createHeaderLabel("Website");
+        Label usernameHeader = createHeaderLabel("Username");
+        Label passwordHeader = createHeaderLabel("Password");
+        Label errorField = new Label ("");
+        headerBox.getChildren().addAll(websiteHeader, usernameHeader,
+                                       passwordHeader, createHeaderLabel(""));
         keysVBox.getChildren().addAll(headerBox);
 
         for (String website : PasswordManager.getWebsites()) {
             // Get the credentials for the website
-            List<String> credentials = PasswordManager.getPassword(website);
+            List<String> credentials = PasswordManager.getCredentials(website);
+            // ERROR
+            if (credentials == null) {
+                errorField.setText("Error in getting the credentials.");
+                continue;
+            }
 
             // Create a button to copy the password to clipboard
             Button copyPasswordBtn = createSmallBtn("Copy");
@@ -256,62 +253,67 @@ public class App extends Application {
                 String password = credentials.get(1);
                 StringSelection stringSelection = new StringSelection(password);
                 Toolkit.getDefaultToolkit().getSystemClipboard().setContents(stringSelection, null);
-                System.out.println("Copied to clipboard!");
 
                 // Clear clipboard after 10 seconds
                 PauseTransition pause = new PauseTransition(Duration.seconds(10));
                 pause.setOnFinished(event -> {
                     StringSelection empty = new StringSelection("");
                     Toolkit.getDefaultToolkit().getSystemClipboard().setContents(empty, null);
-                    System.out.println("Clipboard cleared!");
                 });
                 pause.play();
             });
-            HBox infoBox = new HBox(40, createLabel(website),
+
+            // Create a button to edit the keys
+            Button editBtn = createSmallBtn("Edit");
+            editBtn.setOnAction(e -> editKeyScene(website));
+
+            HBox infoBox = new HBox(30, createLabel(website),
                                     createLabel(credentials.get(0)),
-                                    copyPasswordBtn);
+                                    copyPasswordBtn,
+                                    editBtn);
             infoBox.setAlignment(Pos.CENTER);
-            keysVBox.getChildren().add(infoBox);
+            keysVBox.getChildren().addAll(infoBox);
         }
 
         // Set layout
+        keysVBox.getChildren().add(errorField);
         Button returnBtn = createReturnBtn();
         returnBtn.setOnAction(e -> mainScene());
-        HBox keysTopBox = new HBox(20, returnBtn);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox keysTopBox = new HBox(20, returnBtn, spacer, createLogOutBtn());
         keysTopBox.setAlignment(Pos.TOP_LEFT);
-        VBox root = new VBox(20, keysTopBox, keysVBox);
-        root.setAlignment(Pos.TOP_CENTER);
-        Scene keysScene = new Scene(root, 420, 620);
-        stage.setScene(keysScene);
+        root.getChildren().clear();
+        root.getChildren().addAll(keysTopBox, keysVBox);
     }
 
     /*
      * Creates the scene where a new key can be added.
      */
     private void addKeyScene() {
-        // Create text fileds
+        // Create text fields
         TextField websiteField = new TextField();
         TextField usernameField = new TextField();
         TextField passLength = new TextField();
-        passLength.setMaxWidth(60);
-
-        // Use PasswordField for password to hide input text
+        passLength.setMaxWidth(50);
         PasswordField passField = new PasswordField();
         Button generatePass = createSmallBtn("Generate");
+        Label errorField = new Label("");
         generatePass.setOnAction(e -> {
             // Generate a password and set it to the password field
             try {
                 int length = Integer.parseInt(passLength.getText());
                 if (length < 8) {
-                    System.out.println("Password length must be at least 8 characters.");
-                    return;
+                    errorField.setText("Password length must be at least 8 characters.");
                 } else if (length > 20) {
-                    System.out.println("Password length must be at most 20 characters.");
-                    return;
+                    errorField.setText("Password length must be at most 20 characters.");
+                } else {
+                    passField.setText(PasswordManager.generatePassword(length));
                 }
-                passField.setText(PasswordManager.generatePassword(length));
             } catch (NumberFormatException ex) {
-                System.out.println("Invalid input for password length. Please enter a valid number.");
+                errorField.setText("Invalid input for password length. Please enter a valid number.");
+                passLength.clear();
             }
         });
 
@@ -321,33 +323,142 @@ public class App extends Application {
             String username = usernameField.getText();
             String password = passField.getText();
             if (website.isEmpty() || username.isEmpty() || password.isEmpty()) {
-                System.out.println("Please fill in all fields.");
+                errorField.setText("Please fill in all fields.");
                 return;
             }
             // Add the key to the database
-            PasswordManager.storeKey(website, username, password);
-            keysScene();
+            if (!PasswordManager.storeKey(website, username, password)) {
+                errorField.setText("Failed to add the key.");
+            } else {
+                keysScene();
+            }
         });
 
         // Set layout
         Button returnBtn = createReturnBtn();
         returnBtn.setOnAction(e -> mainScene());
-        HBox addKeyTopBox = new HBox(20, returnBtn);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS); 
+        HBox addKeyTopBox = new HBox(20, returnBtn, spacer, createLogOutBtn());
         addKeyTopBox.setAlignment(Pos.TOP_LEFT);
 
-        // Create VBox with labeled fields and the add key button
-        VBox root = new VBox(20, addKeyTopBox, 
+        root.getChildren().clear();
+        root.getChildren().addAll(addKeyTopBox, 
             createLabeledField("Website:", websiteField),
             createLabeledField("Username:", usernameField),
             createLabeledField("Password length:", passLength),
             createLabeledField("Password:", passField),
             generatePass,
+            errorField,
             addKeyBtn);
+    }
 
-        root.setPadding(new Insets(20, 30, 20, 30));
-        root.setAlignment(Pos.TOP_CENTER);
-        Scene addKeyScene = new Scene(root, 420, 620);
-        stage.setScene(addKeyScene);
+    /*
+     * Creates the scene where a key can be edited.
+     */
+    private void editKeyScene(String website) {
+        Label errorField = new Label("");
+        // Get the credentials for the website
+        List<String> credentials = PasswordManager.getCredentials(website);
+        // ERROR
+        if (credentials == null) {
+            errorField.setText("Error in getting the credentials.");
+            return;
+        }
+
+        // Create text fields
+        Label websiteField = createHeaderLabel(website);
+        TextField usernameField = new TextField(credentials.get(0));
+        TextField passLength = new TextField(String.valueOf(credentials.get(1).length()));
+        passLength.setMaxWidth(60);
+        PasswordField passField = new PasswordField();
+        passField.setText(credentials.get(1));
+
+        Button generatePass = createSmallBtn("Generate");
+        generatePass.setOnAction(e -> {
+            // Generate a password and set it to the password field
+            try {
+                int length = Integer.parseInt(passLength.getText());
+                if (length < 8) {
+                    errorField.setText("Password length must be at least 8 characters.");
+                } else if (length > 20) {
+                    errorField.setText("Password length must be at most 20 characters.");
+                } else {
+                    passField.setText(PasswordManager.generatePassword(length));
+                }
+            } catch (NumberFormatException ex) {
+                errorField.setText("Invalid input for password length. Please enter a valid number.");
+                passLength.clear();
+            }
+        });
+
+        Button saveBtn = createBigBtn("Save");
+        saveBtn.setOnAction(e -> {
+            String username = usernameField.getText();
+            String password = passField.getText();
+            if (username.isEmpty() || password.isEmpty()) {
+                errorField.setText("Please fill in all fields.");
+                return;
+            }
+
+            // Update the credentials to the database
+            if (!PasswordManager.updateKey(website, username, password)) {
+                errorField.setText("Failed to update the key.");
+            } else {
+                keysScene();
+            }
+        });
+
+        Button deleteBtn = createBigBtn("Delete");
+        deleteBtn.setOnAction(e -> {
+            // Create a confirmation dialog
+            Stage confirmStage = new Stage();
+            confirmStage.setTitle("Confirm Deletion");
+            Label confirmLabel = new Label("Are you sure you want to delete this key?");
+
+            Button noBtn = createSmallBtn("No");
+            noBtn.setOnAction(event -> confirmStage.close());
+            // Create a button to confirm deletion
+            Button yesBtn = createSmallBtn("Yes");
+            yesBtn.setOnAction(event -> {
+                confirmStage.close();
+                // Delete the key from the database
+                if (!PasswordManager.deleteKey(website)) {
+                    errorField.setText("Failed to delete the key.");
+                } else {
+                    keysScene();
+                }
+            });
+
+            HBox btnBox = new HBox(20, noBtn, yesBtn);
+            btnBox.setAlignment(Pos.CENTER);
+            VBox confirmBox = new VBox(20, confirmLabel, btnBox);
+            confirmBox.setPadding(new Insets(20));
+            confirmBox.setAlignment(Pos.CENTER);
+
+            Scene confirmScene = new Scene(confirmBox, 300, 150);
+            confirmStage.setScene(confirmScene);
+            confirmStage.show();
+        });
+
+        // Set layout
+        Button returnBtn = createReturnBtn();
+        returnBtn.setOnAction(e -> keysScene());
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox editKeyTopBox = new HBox(20, returnBtn, spacer, createLogOutBtn());
+        editKeyTopBox.setAlignment(Pos.TOP_LEFT);
+
+        root.getChildren().clear();
+        root.getChildren().addAll(editKeyTopBox, 
+            websiteField,
+            createLabeledField("Username:", usernameField),
+            createLabeledField("Password length:", passLength),
+            createLabeledField("Password:", passField),
+            generatePass,
+            errorField,
+            saveBtn,
+            deleteBtn);
     }
 
     /**
