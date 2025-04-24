@@ -180,13 +180,17 @@ public class App extends Application {
 
         Button signinBtn = createBigBtn("Sign In");
         signinBtn.setOnAction(e -> {
+            // Check if the fields are empty, and if the password is valid
             if (passField.getText().length() < 8) {
                 errorField.setText("Password must be at least 8 characters long.");
+            } else if (!passField.getText().matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
+                errorField.setText("Password must include both lower and uppercase letters and at least one number.");
             } else if (usernameField.getText().trim().isEmpty()) {
                 errorField.setText("Please fill in all fields.");
             } else if (!passField.getText().equals(passRepetitionField.getText())) {
                 errorField.setText("Passwords don't match.");
             } else {
+                // Register the user
                 boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(),
                                                                       passField.getText().toCharArray());
                 if (isSuccesful) {
@@ -251,7 +255,6 @@ public class App extends Application {
         for (String website : PasswordManager.getWebsites()) {
             // Get the credentials for the website
             List<String> credentials = PasswordManager.getCredentials(website);
-            // ERROR
             if (credentials == null) {
                 errorField.setText("Error in getting the credentials.");
                 continue;

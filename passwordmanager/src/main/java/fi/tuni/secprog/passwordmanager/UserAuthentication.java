@@ -78,7 +78,7 @@ public class UserAuthentication {
             Timestamp lastFailedLogin = rs.getTimestamp("last_failed_login");
 
             // If the password is correct, set the user_id and save the encryption key
-            if (BCrypt.checkpw(password.toString(), hashedPassword)) {
+            if (BCrypt.checkpw(new String(password), hashedPassword)) {
                 user_id = rs.getInt("id");
                 AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
                 resetFailedAttempts(username);
