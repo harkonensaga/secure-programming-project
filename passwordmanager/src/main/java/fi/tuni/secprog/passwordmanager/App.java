@@ -19,6 +19,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import java.awt.datatransfer.StringSelection;
 import java.awt.Toolkit;
@@ -144,7 +145,7 @@ public class App extends Application {
                 return;
             }
             boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
-                                                                      passField.getText());
+                                                                      passField.getText().toCharArray());
             if (isSuccesful) {
                 mainScene();
             } else {
@@ -179,10 +180,15 @@ public class App extends Application {
 
         Button signinBtn = createBigBtn("Sign In");
         signinBtn.setOnAction(e -> {
-            if (!passField.getText().equals(passRepetitionField.getText())) {
+            if (passField.getText().length() < 8) {
+                errorField.setText("Password must be at least 8 characters long.");
+            } else if (usernameField.getText().trim().isEmpty()) {
+                errorField.setText("Please fill in all fields.");
+            } else if (!passField.getText().equals(passRepetitionField.getText())) {
                 errorField.setText("Passwords don't match.");
             } else {
-                boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(), passField.getText());
+                boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(),
+                                                                      passField.getText().toCharArray());
                 if (isSuccesful) {
                     loginScene();
                 } else {
@@ -304,37 +310,26 @@ public class App extends Application {
         PasswordField passField = new PasswordField();
         Button generatePass = createSmallBtn("Generate");
         Label errorField = new Label("");
-        generatePass.setOnAction(e -> {
-            // Generate a password and set it to the password field
-            try {
-                int length = Integer.parseInt(passLength.getText());
-                if (length < 8) {
-                    errorField.setText("Password length must be at least 8 characters.");
-                } else if (length > 20) {
-                    errorField.setText("Password length must be at most 20 characters.");
-                } else {
-                    passField.setText(PasswordManager.generatePassword(length));
-                }
-            } catch (NumberFormatException ex) {
-                errorField.setText("Invalid input for password length. Please enter a valid number.");
-                passLength.clear();
-            }
-        });
+        generatePass.setOnAction(e -> {generatePassword(passLength, passField, errorField);});
 
         Button addKeyBtn = createBigBtn("Add key");
         addKeyBtn.setOnAction(e -> {
             String website = websiteField.getText();
             String username = usernameField.getText();
             String password = passField.getText();
-            if (website.isEmpty() || username.isEmpty() || password.isEmpty()) {
+            if (website.trim().isEmpty() || username.trim().isEmpty() || password.trim().isEmpty()) {
                 errorField.setText("Please fill in all fields.");
-                return;
-            }
-            // Add the key to the database
-            if (!PasswordManager.storeKey(website, username, password)) {
-                errorField.setText("Failed to add the key.");
+            } else if (password.length() < 8) {
+                errorField.setText("Password must be at least 8 characters long.");
+            } else if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
+                errorField.setText("Password must include both lower and uppercase letters and at least one number.");
             } else {
-                keysScene();
+                // Add the key to the database
+                if (!PasswordManager.storeKey(website, username, password)) {
+                    errorField.setText("Failed to add the key.");
+                } else {
+                    keysScene();
+                }
             }
         });
 
@@ -379,37 +374,26 @@ public class App extends Application {
         passField.setText(credentials.get(1));
 
         Button generatePass = createSmallBtn("Generate");
-        generatePass.setOnAction(e -> {
-            // Generate a password and set it to the password field
-            try {
-                int length = Integer.parseInt(passLength.getText());
-                if (length < 8) {
-                    errorField.setText("Password length must be at least 8 characters.");
-                } else if (length > 20) {
-                    errorField.setText("Password length must be at most 20 characters.");
-                } else {
-                    passField.setText(PasswordManager.generatePassword(length));
-                }
-            } catch (NumberFormatException ex) {
-                errorField.setText("Invalid input for password length. Please enter a valid number.");
-                passLength.clear();
-            }
-        });
+        generatePass.setOnAction(e -> {generatePassword(passLength, passField, errorField);});
 
         Button saveBtn = createBigBtn("Save");
         saveBtn.setOnAction(e -> {
             String username = usernameField.getText();
             String password = passField.getText();
-            if (username.isEmpty() || password.isEmpty()) {
+            // Check if the fields are empty
+            if (username.trim().isEmpty() || password.trim().isEmpty()) {
                 errorField.setText("Please fill in all fields.");
-                return;
-            }
-
-            // Update the credentials to the database
-            if (!PasswordManager.updateKey(website, username, password)) {
-                errorField.setText("Failed to update the key.");
+            } else if (password.length() < 8) {
+                errorField.setText("Password must be at least 8 characters long.");
+            } else if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
+                errorField.setText("Password must include both lower and uppercase letters and at least one number.");
             } else {
-                keysScene();
+                // Update the credentials to the database
+                if (!PasswordManager.updateKey(website, username, password)) {
+                    errorField.setText("Failed to update the key.");
+                } else {
+                    keysScene();
+                }
             }
         });
 
@@ -463,6 +447,25 @@ public class App extends Application {
             errorField,
             saveBtn,
             deleteBtn);
+    }
+
+    /*
+     * Generates a password and sets it to the password field.
+     */
+    private void generatePassword(TextField passLength, PasswordField passField, Label errorField) {
+        try {
+            int length = Integer.parseInt(passLength.getText());
+            if (length < 8) {
+                errorField.setText("Password length must be at least 8 characters.");
+            } else if (length > 20) {
+                errorField.setText("Password length must be at most 20 characters.");
+            } else {
+                passField.setText(PasswordManager.generatePassword(length));
+            }
+        } catch (NumberFormatException ex) {
+            errorField.setText("Invalid input for password length. Please enter a valid number.");
+            passLength.clear();
+        }
     }
 
     /**

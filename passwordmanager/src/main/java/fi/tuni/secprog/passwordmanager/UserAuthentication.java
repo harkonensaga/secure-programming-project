@@ -59,12 +59,11 @@ public class UserAuthentication {
     /*
      * A function to authenticate a user.
      */
-    public static boolean authenticateUser(String username, String password) {
+    public static boolean authenticateUser(String username, char[] password) {
         String sql = "SELECT id, password_hash, salt, failed_attempts, last_failed_login " +
                      "FROM users " +
                      "WHERE username = ?";
 
-        // Connect to the database and check if the user exists
         try (Connection conn = DatabaseHelper.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
@@ -79,10 +78,12 @@ public class UserAuthentication {
             Timestamp lastFailedLogin = rs.getTimestamp("last_failed_login");
 
             // If the password is correct, set the user_id and save the encryption key
-            if (BCrypt.checkpw(password, hashedPassword)) {
+            if (BCrypt.checkpw(password.toString(), hashedPassword)) {
                 user_id = rs.getInt("id");
                 AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
                 resetFailedAttempts(username);
+                // Clear the password from memory after use
+                java.util.Arrays.fill(password, ' ');
                 return true;
             } else {
                 // If the password is incorrect, update the failed attempts and check
@@ -104,17 +105,22 @@ public class UserAuthentication {
     /*
      * A function to register a new user to the database.
      */
-    public static boolean registerUser(String username, String password) {
+    public static boolean registerUser(String username, char[] password) {
         String sql = "INSERT INTO users (username, password_hash, salt) VALUES (?, ?, ?)";
-        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
-
+        
+        String hashedPassword = BCrypt.hashpw(new String(password), BCrypt.gensalt(12));
+        String salt = AESUtil.generateSalt();
+        // Clear the password from memory after use
+        java.util.Arrays.fill(password, ' ');
+    
         // Connect to the database and insert the new user
         try (Connection conn = DatabaseHelper.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    
             pstmt.setString(1, username);
             pstmt.setString(2, hashedPassword);
-            pstmt.setString(3, AESUtil.generateSalt());
-
+            pstmt.setString(3, salt);
+    
             // Execute the query and return true if the query was successful
             int affectedRows = pstmt.executeUpdate();
             return affectedRows > 0;
@@ -123,7 +129,7 @@ public class UserAuthentication {
         }
         return false;
     }
-
+    
     /*
      * A function to update the failed attempts of a user in the database.
      */
