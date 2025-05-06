@@ -19,7 +19,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import java.awt.datatransfer.StringSelection;
 import java.awt.Toolkit;
@@ -30,14 +29,22 @@ import java.awt.Toolkit;
 public class App extends Application {
     private Stage stage;
     private VBox root;
+    private String backgroundColor = "#22162B";
+    private String btnColor = "#76BCBC";
+    private String btnHoverColor = "#69B5B5";
+    private String textColor = "#F2F4F3";
+
 
     /*
      * Creates a header type label with the given text.
      */
     private Label createHeaderLabel(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-font-size: 12pt; -fx-alignment: center;");
-        label.setPrefSize(100, 25);
+        label.setStyle("-fx-font-size: 12pt;" +
+                       "-fx-alignment: center;" +
+                       "-fx-text-fill: " + textColor +";" +
+                       "-fx-font-weight: bold;");
+        label.setPrefSize(200, 25);
         return label;
     }
 
@@ -46,9 +53,40 @@ public class App extends Application {
      */
     private Label createLabel(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-font-size: 10pt; -fx-alignment: center;");
-        label.setPrefSize(70, 15);
+        label.setStyle("-fx-font-size: 10pt;" +
+                       "-fx-alignment: CENTER_LEFT;" +
+                       "-fx-text-fill: " + textColor + ";");
+        label.setMinSize(80, 15);
         return label;
+    }
+
+    /*
+     * Creates error label with the given text.
+     */
+    
+    private Label createErrorLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-font-size: 10pt;" +
+                       "-fx-alignment: center;" +
+                       "-fx-text-fill: " + textColor + ";");
+        label.setWrapText(true);
+        return label;
+    }
+
+    /*
+     * Sets the style for the button. The button has a hover effect.
+     */
+
+    private void setBtnStyle(Button btn, int fontSize) {
+        btn.setStyle("-fx-font-size: " + fontSize + "pt;" +
+                     "-fx-background-color: " + btnColor + ";" +
+                     "-fx-border-radius: 20%;");
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-font-size: " + fontSize + "pt;" +
+                                                "-fx-background-color: " + btnHoverColor + ";" +
+                                                "-fx-border-radius: 20%;"));    
+        btn.setOnMouseExited(e -> btn.setStyle("-fx-font-size: " + fontSize + "pt;" +
+                                               "-fx-background-color: " + btnColor + ";" +
+                                               "-fx-border-radius: 20%;"));
     }
 
     /*
@@ -56,7 +94,7 @@ public class App extends Application {
      */
     private Button createBigBtn(String text) {
         Button bigBtn = new Button(text);
-        bigBtn.setStyle("-fx-font-size: 16pt; -fx-padding: 10px 20px;");
+        setBtnStyle(bigBtn, 16);
         bigBtn.setPrefSize(200, 50);
         return bigBtn;
     }
@@ -66,8 +104,8 @@ public class App extends Application {
      */
     private Button createSmallBtn(String text) {
         Button smallBtn = new Button(text);
-        smallBtn.setStyle("-fx-font-size: 8pt; -fx-padding: 5px 10px;");
-        smallBtn.setPrefSize(70, 15);
+        setBtnStyle(smallBtn, 10);
+        smallBtn.setMinSize(60, 15);
         return smallBtn;
     }
 
@@ -76,8 +114,8 @@ public class App extends Application {
      */
     private Button createReturnBtn() {
         Button returnBtn = new Button("↩");
-        returnBtn.setPrefSize(35, 35);
-        returnBtn.setStyle("-fx-font-size: 16pt; -fx-padding: 2px; -fx-background-radius: 8%;");
+        returnBtn.setPrefSize(35,35);
+        setBtnStyle(returnBtn, 12);
         return returnBtn;
     }
 
@@ -87,7 +125,7 @@ public class App extends Application {
     private Button createLogOutBtn() {
         Button logOutBtn = new Button("Log Out");
         logOutBtn.setPrefSize(80, 35);
-        logOutBtn.setStyle("-fx-font-size: 10pt; -fx-padding: 2px; -fx-background-radius: 8%;");
+        setBtnStyle(logOutBtn, 10);
         logOutBtn.setOnAction(e -> {
             AESKeyHolder.clearKey();
             UserAuthentication.clearUserId();
@@ -100,7 +138,7 @@ public class App extends Application {
      * Creates a label and a field with the given label text and text field.
      */
     private VBox createLabeledField(String labelText, TextField textField) {
-        Label label = new Label(labelText);
+        Label label = createLabel(labelText);
         VBox vbox = new VBox(5, label, textField);
         vbox.setAlignment(Pos.TOP_LEFT);
         return vbox;
@@ -112,6 +150,7 @@ public class App extends Application {
         this.root = new VBox(20);
         root.setPadding(new Insets(20, 30, 20, 30));
         root.setAlignment(Pos.TOP_CENTER);
+        root.setStyle("-fx-background-color: " + backgroundColor);
         Scene scene = new Scene(root, 420, 620);
         stage.setScene(scene);
         stage.setTitle("Password Manager");
@@ -136,7 +175,7 @@ public class App extends Application {
         /// Create text fields for username and password
         TextField usernameField = new TextField();
         PasswordField passField = new PasswordField();
-        Label errorField = new Label("");
+        Label errorField = createErrorLabel("");
 
         Button loginBtn = createBigBtn("Log In");
         loginBtn.setOnAction(e -> {
@@ -176,7 +215,7 @@ public class App extends Application {
         // Use PasswordField for password to hide input text
         PasswordField passField = new PasswordField();
         PasswordField passRepetitionField = new PasswordField();
-        Label errorField = new Label("");
+        Label errorField = createErrorLabel("");
 
         Button signinBtn = createBigBtn("Sign In");
         signinBtn.setOnAction(e -> {
@@ -247,7 +286,7 @@ public class App extends Application {
         Label websiteHeader = createHeaderLabel("Website");
         Label usernameHeader = createHeaderLabel("Username");
         Label passwordHeader = createHeaderLabel("Password");
-        Label errorField = new Label ("");
+        Label errorField = createErrorLabel("");
         headerBox.getChildren().addAll(websiteHeader, usernameHeader,
                                        passwordHeader, createHeaderLabel(""));
         keysVBox.getChildren().addAll(headerBox);
@@ -312,7 +351,7 @@ public class App extends Application {
         passLength.setMaxWidth(50);
         PasswordField passField = new PasswordField();
         Button generatePass = createSmallBtn("Generate");
-        Label errorField = new Label("");
+        Label errorField = createErrorLabel("");
         generatePass.setOnAction(e -> {generatePassword(passLength, passField, errorField);});
 
         Button addKeyBtn = createBigBtn("Add key");
@@ -359,7 +398,7 @@ public class App extends Application {
      * Creates the scene where a key can be edited.
      */
     private void editKeyScene(String website) {
-        Label errorField = new Label("");
+        Label errorField = createErrorLabel("");
         // Get the credentials for the website
         List<String> credentials = PasswordManager.getCredentials(website);
         // ERROR
@@ -405,7 +444,7 @@ public class App extends Application {
             // Create a confirmation dialog
             Stage confirmStage = new Stage();
             confirmStage.setTitle("Confirm Deletion");
-            Label confirmLabel = new Label("Are you sure you want to delete this key?");
+            Label confirmLabel = createLabel("Are you sure you want to delete this key?");
 
             Button noBtn = createSmallBtn("No");
             noBtn.setOnAction(event -> confirmStage.close());
@@ -426,6 +465,7 @@ public class App extends Application {
             VBox confirmBox = new VBox(20, confirmLabel, btnBox);
             confirmBox.setPadding(new Insets(20));
             confirmBox.setAlignment(Pos.CENTER);
+            confirmBox.setStyle("-fx-background-color: " + backgroundColor + ";");
 
             Scene confirmScene = new Scene(confirmBox, 300, 150);
             confirmStage.setScene(confirmScene);
@@ -466,7 +506,7 @@ public class App extends Application {
                 passField.setText(PasswordManager.generatePassword(length));
             }
         } catch (NumberFormatException ex) {
-            errorField.setText("Invalid input for password length. Please enter a valid number.");
+            errorField.setText("Please enter a valid number for password length.");
             passLength.clear();
         }
     }
@@ -479,8 +519,8 @@ public class App extends Application {
             Image iconImage = new Image(new File(
                 String.format("icons/%s.png", iconName)).toURI().toString());
             ImageView icon = new ImageView(iconImage);
-            icon.setFitWidth(80);
-            icon.setFitHeight(80);
+            icon.setFitWidth(150);
+            icon.setFitHeight(150);
             return icon;
         } catch (Exception e) {
             System.out.println("Error: Can't open icon picture.");
