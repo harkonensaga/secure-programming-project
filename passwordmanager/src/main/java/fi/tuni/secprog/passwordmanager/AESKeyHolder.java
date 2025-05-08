@@ -12,7 +12,6 @@ public class AESKeyHolder {
     public static SecretKeySpec getKey() {
         return aesKey;
     }
-
     
     public static void clearKey() {
         if (aesKey != null) {

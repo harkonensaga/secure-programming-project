@@ -1,9 +1,6 @@
 package fi.tuni.secprog.passwordmanager;
 
-import java.io.File;
-import javafx.util.Duration;
 import java.util.List;
-
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -13,15 +10,18 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
 import java.awt.datatransfer.StringSelection;
 import java.awt.Toolkit;
+import javafx.scene.layout.Region;
+import static fi.tuni.secprog.passwordmanager.GUIElements.*;
+
 
 /**
  * Password manager application
@@ -29,120 +29,8 @@ import java.awt.Toolkit;
 public class App extends Application {
     private Stage stage;
     private VBox root;
-    private String backgroundColor = "#22162B";
-    private String btnColor = "#76BCBC";
-    private String btnHoverColor = "#69B5B5";
-    private String textColor = "#F2F4F3";
-
-
-    /*
-     * Creates a header type label with the given text.
-     */
-    private Label createHeaderLabel(String text) {
-        Label label = new Label(text);
-        label.setStyle("-fx-font-size: 12pt;" +
-                       "-fx-alignment: center;" +
-                       "-fx-text-fill: " + textColor +";" +
-                       "-fx-font-weight: bold;");
-        label.setPrefSize(200, 25);
-        return label;
-    }
-
-    /*
-     * Creates a label with the given text.
-     */
-    private Label createLabel(String text) {
-        Label label = new Label(text);
-        label.setStyle("-fx-font-size: 10pt;" +
-                       "-fx-alignment: CENTER_LEFT;" +
-                       "-fx-text-fill: " + textColor + ";");
-        label.setMinSize(80, 15);
-        return label;
-    }
-
-    /*
-     * Creates error label with the given text.
-     */
-    
-    private Label createErrorLabel(String text) {
-        Label label = new Label(text);
-        label.setStyle("-fx-font-size: 10pt;" +
-                       "-fx-alignment: center;" +
-                       "-fx-text-fill: " + textColor + ";");
-        label.setWrapText(true);
-        return label;
-    }
-
-    /*
-     * Sets the style for the button. The button has a hover effect.
-     */
-
-    private void setBtnStyle(Button btn, int fontSize) {
-        btn.setStyle("-fx-font-size: " + fontSize + "pt;" +
-                     "-fx-background-color: " + btnColor + ";" +
-                     "-fx-border-radius: 20%;");
-        btn.setOnMouseEntered(e -> btn.setStyle("-fx-font-size: " + fontSize + "pt;" +
-                                                "-fx-background-color: " + btnHoverColor + ";" +
-                                                "-fx-border-radius: 20%;"));    
-        btn.setOnMouseExited(e -> btn.setStyle("-fx-font-size: " + fontSize + "pt;" +
-                                               "-fx-background-color: " + btnColor + ";" +
-                                               "-fx-border-radius: 20%;"));
-    }
-
-    /*
-     * Creates a big button with the given text.
-     */
-    private Button createBigBtn(String text) {
-        Button bigBtn = new Button(text);
-        setBtnStyle(bigBtn, 16);
-        bigBtn.setPrefSize(200, 50);
-        return bigBtn;
-    }
-
-    /*
-     * Creates a small button with the given text.
-     */
-    private Button createSmallBtn(String text) {
-        Button smallBtn = new Button(text);
-        setBtnStyle(smallBtn, 10);
-        smallBtn.setMinSize(60, 15);
-        return smallBtn;
-    }
-
-    /*
-     * Creates a return button.
-     */
-    private Button createReturnBtn() {
-        Button returnBtn = new Button("↩");
-        returnBtn.setPrefSize(35,35);
-        setBtnStyle(returnBtn, 12);
-        return returnBtn;
-    }
-
-    /*
-     * Creates a log out button.
-     */
-    private Button createLogOutBtn() {
-        Button logOutBtn = new Button("Log Out");
-        logOutBtn.setPrefSize(80, 35);
-        setBtnStyle(logOutBtn, 10);
-        logOutBtn.setOnAction(e -> {
-            AESKeyHolder.clearKey();
-            UserAuthentication.clearUserId();
-            start(stage);
-        });
-        return logOutBtn;
-    }
-
-    /*
-     * Creates a label and a field with the given label text and text field.
-     */
-    private VBox createLabeledField(String labelText, TextField textField) {
-        Label label = createLabel(labelText);
-        VBox vbox = new VBox(5, label, textField);
-        vbox.setAlignment(Pos.TOP_LEFT);
-        return vbox;
-    }
+    private Button logOutBtn;
+    private final String backgroundColor = "#22162B";
 
     @Override
     public void start(Stage stage) {
@@ -164,6 +52,13 @@ public class App extends Application {
         signInBtn.setOnAction(e -> signInScene());
         logInBtn.setOnAction(e -> loginScene());
 
+        logOutBtn = createSmallBtn("Log Out");
+        logOutBtn.setPrefSize(80, 35);
+        logOutBtn.setOnAction(e -> {
+            UserAuthentication.logoutUser();
+            start(stage);
+        });
+
         // Set layout
         root.getChildren().addAll(keyIcon, logInBtn, signInBtn);
     }
@@ -181,14 +76,14 @@ public class App extends Application {
         loginBtn.setOnAction(e -> {
             if (UserAuthentication.isAccountLocked(usernameField.getText())) {
                 errorField.setText("Account is locked. Try again later.");
-                return;
-            }
-            boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
-                                                                      passField.getText().toCharArray());
-            if (isSuccesful) {
-                mainScene();
             } else {
-                errorField.setText("Login failed.");
+                boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
+                                                                        passField.getText().toCharArray());
+                if (isSuccesful) {
+                    mainScene();
+                } else {
+                    errorField.setText("Login failed.");
+                }
             }
         });
 
@@ -223,7 +118,8 @@ public class App extends Application {
             if (passField.getText().length() < 8) {
                 errorField.setText("Password must be at least 8 characters long.");
             } else if (!passField.getText().matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
-                errorField.setText("Password must include both lower and uppercase letters and at least one number.");
+                errorField.setText("Password must include both lower and uppercase letters" +
+                                   "and at least one number and special character.");
             } else if (usernameField.getText().trim().isEmpty()) {
                 errorField.setText("Please fill in all fields.");
             } else if (!passField.getText().equals(passRepetitionField.getText())) {
@@ -235,7 +131,7 @@ public class App extends Application {
                 if (isSuccesful) {
                     loginScene();
                 } else {
-                    errorField.setText("User registration failed");
+                    errorField.setText("User registration failed. Please try a different username");
                 }
             }
         });
@@ -260,12 +156,11 @@ public class App extends Application {
      */
     private void mainScene() {
         // Create buttons for keys and adding a key
-        Button keysBtn = createBigBtn("My keys");
-        Button addBtn = createBigBtn("+ Add key");
+        Button keysBtn = GUIElements.createBigBtn("My keys");
+        Button addBtn = GUIElements.createBigBtn("+ Add key");
         keysBtn.setOnAction(e -> keysScene());
         addBtn.setOnAction(e -> addKeyScene());
 
-        Button logOutBtn = createLogOutBtn();
         HBox mainTopBox = new HBox(20, logOutBtn);
         mainTopBox.setAlignment(Pos.TOP_RIGHT);
 
@@ -329,12 +224,12 @@ public class App extends Application {
 
         // Set layout
         keysVBox.getChildren().add(errorField);
-        Button returnBtn = createReturnBtn();
+        Button returnBtn = GUIElements.createReturnBtn();
         returnBtn.setOnAction(e -> mainScene());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox keysTopBox = new HBox(20, returnBtn, spacer, createLogOutBtn());
+        HBox keysTopBox = new HBox(20, returnBtn, spacer, logOutBtn);
         keysTopBox.setAlignment(Pos.TOP_LEFT);
         root.getChildren().clear();
         root.getChildren().addAll(keysTopBox, keysVBox);
@@ -364,7 +259,8 @@ public class App extends Application {
             } else if (password.length() < 8) {
                 errorField.setText("Password must be at least 8 characters long.");
             } else if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
-                errorField.setText("Password must include both lower and uppercase letters and at least one number.");
+                errorField.setText("Password must include both lower and uppercase letters" +
+                                   "and at least one number and special character.");
             } else {
                 // Add the key to the database
                 if (!PasswordManager.storeKey(website, username, password)) {
@@ -376,11 +272,11 @@ public class App extends Application {
         });
 
         // Set layout
-        Button returnBtn = createReturnBtn();
+        Button returnBtn = GUIElements.createReturnBtn();
         returnBtn.setOnAction(e -> mainScene());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS); 
-        HBox addKeyTopBox = new HBox(20, returnBtn, spacer, createLogOutBtn());
+        HBox addKeyTopBox = new HBox(20, returnBtn, spacer, logOutBtn);
         addKeyTopBox.setAlignment(Pos.TOP_LEFT);
 
         root.getChildren().clear();
@@ -428,7 +324,8 @@ public class App extends Application {
             } else if (password.length() < 8) {
                 errorField.setText("Password must be at least 8 characters long.");
             } else if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
-                errorField.setText("Password must include both lower and uppercase letters and at least one number.");
+                errorField.setText("Password must include both lower and uppercase letters" +
+                                   "and at least one number and special character.");
             } else {
                 // Update the credentials to the database
                 if (!PasswordManager.updateKey(website, username, password)) {
@@ -473,11 +370,11 @@ public class App extends Application {
         });
 
         // Set layout
-        Button returnBtn = createReturnBtn();
+        Button returnBtn = GUIElements.createReturnBtn();
         returnBtn.setOnAction(e -> keysScene());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox editKeyTopBox = new HBox(20, returnBtn, spacer, createLogOutBtn());
+        HBox editKeyTopBox = new HBox(20, returnBtn, spacer, logOutBtn);
         editKeyTopBox.setAlignment(Pos.TOP_LEFT);
 
         root.getChildren().clear();
@@ -508,23 +405,6 @@ public class App extends Application {
         } catch (NumberFormatException ex) {
             errorField.setText("Please enter a valid number for password length.");
             passLength.clear();
-        }
-    }
-
-    /**
-     * Gets the png image and returns the image.
-     */
-    private ImageView getIcon(String iconName) {
-        try {
-            Image iconImage = new Image(new File(
-                String.format("icons/%s.png", iconName)).toURI().toString());
-            ImageView icon = new ImageView(iconImage);
-            icon.setFitWidth(150);
-            icon.setFitHeight(150);
-            return icon;
-        } catch (Exception e) {
-            System.out.println("Error: Can't open icon picture.");
-            return null;
         }
     }
 

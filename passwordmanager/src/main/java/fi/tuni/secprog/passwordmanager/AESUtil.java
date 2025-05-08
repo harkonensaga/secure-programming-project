@@ -31,7 +31,8 @@ public class AESUtil {
      * Derive an encryption key from the user's master password and salt.
      */
     public static SecretKeySpec deriveKey(char[] masterPassword, String salt) throws Exception {
-        KeySpec spec = new PBEKeySpec(masterPassword, salt.getBytes(), ITERATIONS, KEY_LENGTH);
+        byte[] saltBytes = Base64.getDecoder().decode(salt);
+        KeySpec spec = new PBEKeySpec(masterPassword, saltBytes, ITERATIONS, KEY_LENGTH);
         SecretKeyFactory factory = SecretKeyFactory.getInstance(ALGORITHM);
         byte[] keyBytes = factory.generateSecret(spec).getEncoded();
         return new SecretKeySpec(keyBytes, "AES");
@@ -39,16 +40,20 @@ public class AESUtil {
 
     /*
      * Encrypt data with provided AES key.
+     * The method uses a random IV for each encryption to ensure uniqueness.
      */
     public static String encrypt(String data) throws Exception {
         SecretKeySpec key = AESKeyHolder.getKey();
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
 
+        // Generate a random Initialization Vector (IV) for this encryption operation
         byte[] iv = new byte[GCM_IV_LENGTH];
         new SecureRandom().nextBytes(iv);
-        GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
 
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
         cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec);
+        
+        // Perform the actual encryption of the input data
         byte[] encryptedData = cipher.doFinal(data.getBytes());
 
         // Combine IV + ciphertext
@@ -56,16 +61,20 @@ public class AESUtil {
         System.arraycopy(iv, 0, ivAndEncrypted, 0, iv.length);
         System.arraycopy(encryptedData, 0, ivAndEncrypted, iv.length, encryptedData.length);
 
+        // Encode the combined IV and ciphertext as a Base64 string for safe storage/transmission
         return Base64.getEncoder().encodeToString(ivAndEncrypted);
     }
 
     /*
      * Decrypt data with provided AES key.
+     * Decrypts a Base64-encoded string that was encrypted using AES in GCM mode.
+     * The input must contain both the IV and the ciphertext.
      */
     public static String decrypt(String encryptedData) throws Exception {
         SecretKeySpec key = AESKeyHolder.getKey();
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
 
+        // Decode the Base64-encoded input to get the raw bytes (IV + ciphertext)
         byte[] ivAndEncrypted = Base64.getDecoder().decode(encryptedData);
 
         byte[] iv = new byte[GCM_IV_LENGTH];
@@ -76,6 +85,7 @@ public class AESUtil {
         GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
         cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec);
 
+        // Perform the actual decryption and return the plaintext as a string
         byte[] decryptedData = cipher.doFinal(ciphertext);
         return new String(decryptedData);
     }

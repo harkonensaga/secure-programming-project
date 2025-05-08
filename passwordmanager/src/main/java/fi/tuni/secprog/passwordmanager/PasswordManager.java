@@ -7,13 +7,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-
 public class PasswordManager {
 
     private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
     private static final String DIGITS = "0123456789";
-    private static final String SYMBOLS = "!@#$%^&*";
+    private static final String SYMBOLS = "!@#$%^&*()_-+=[]{};:,.?";
 
     private static final String ALL_CHARS = UPPER + LOWER + DIGITS + SYMBOLS;
 
@@ -129,7 +128,6 @@ public class PasswordManager {
     public static boolean storeKey(String siteName, String username, String password) {
         // Check if the user already has credentials for the site
         if (doCredentialsExist(siteName)) {
-            System.out.println("User already has credentials for the site.");
             return false;
         }
 
@@ -166,7 +164,6 @@ public class PasswordManager {
         String sql = "UPDATE credentials " +
                      "SET site_username = ?, site_password = ? " +
                      "WHERE user_id = ? AND site_name = ?";
-
         try (Connection conn = DatabaseHelper.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 

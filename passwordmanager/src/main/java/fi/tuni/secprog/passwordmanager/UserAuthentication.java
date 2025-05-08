@@ -15,7 +15,7 @@ import org.mindrot.jbcrypt.BCrypt;
  */
 public class UserAuthentication {
 
-    private static int user_id;
+    private static int user_id = 0;
     private static final int MAX_ATTEMPTS = 5;
     private static final int TIMEOUT = 5; // in minutes
 
@@ -27,11 +27,20 @@ public class UserAuthentication {
     }
 
     /*
-     * A function to clear the logged out user's id.
+     * A function to check is such user exists in the database.
      */
-    public static void clearUserId() {
-        user_id = 0;
-        return;
+    public static boolean userExists(String username) {
+        String sql = "SELECT id FROM users WHERE username = ?";
+        // Connect to the database and check if the user exists
+        try (Connection conn = DatabaseHelper.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            System.err.println("Error during SQL query: " + e.getMessage());
+        }
+        return false;
     }
 
     /*
@@ -60,6 +69,9 @@ public class UserAuthentication {
      * A function to authenticate a user.
      */
     public static boolean authenticateUser(String username, char[] password) {
+        if (!userExists(username)) {
+            return false;
+        }
         String sql = "SELECT id, password_hash, salt, failed_attempts, last_failed_login " +
                      "FROM users " +
                      "WHERE username = ?";
@@ -69,10 +81,6 @@ public class UserAuthentication {
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
             
-            // If the query is empty, user doesn't exist, return false
-            if (!rs.next()) {
-                return false;
-            }
             String hashedPassword = rs.getString("password_hash");
             Integer attempts = rs.getInt("failed_attempts");
             Timestamp lastFailedLogin = rs.getTimestamp("last_failed_login");
@@ -81,18 +89,12 @@ public class UserAuthentication {
             if (BCrypt.checkpw(new String(password), hashedPassword)) {
                 user_id = rs.getInt("id");
                 AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
-                resetFailedAttempts(username);
                 // Clear the password from memory after use
                 java.util.Arrays.fill(password, ' ');
+                resetFailedAttempts(username);
                 return true;
             } else {
-                // If the password is incorrect, update the failed attempts and check
-                // if the account should be locked
-                updateFailedAttempts(username);
-                LocalDateTime allowedTime = LocalDateTime.now().minusMinutes(TIMEOUT);
-                if ((attempts+1) >= MAX_ATTEMPTS && lastFailedLogin.toLocalDateTime().isAfter(allowedTime)) {
-                    lockAccount(username);
-                }
+                updateFailedAttempts(username, attempts, lastFailedLogin);
             }
         } catch (SQLException e) {
             System.err.println("Error during authentication: " + e.getMessage());
@@ -103,9 +105,21 @@ public class UserAuthentication {
     }
 
     /*
+     * A function log out the user.
+     */
+    public static void logoutUser() {
+        // Clear the AES key and user id
+        AESKeyHolder.clearKey();
+        user_id = 0;
+    }
+
+    /*
      * A function to register a new user to the database.
      */
     public static boolean registerUser(String username, char[] password) {
+        if (userExists(username)) {
+            return false;
+        }
         String sql = "INSERT INTO users (username, password_hash, salt) VALUES (?, ?, ?)";
         
         String hashedPassword = BCrypt.hashpw(new String(password), BCrypt.gensalt(12));
@@ -133,17 +147,27 @@ public class UserAuthentication {
     /*
      * A function to update the failed attempts of a user in the database.
      */
-    private static void updateFailedAttempts(String username) {
+    private static void updateFailedAttempts(String username, int attempts, Timestamp lastFailedLogin) {
         String sql = "UPDATE users " +
                      "SET failed_attempts = failed_attempts + 1, last_failed_login = ? " +
                      "WHERE username = ?";
-        try (Connection conn = DatabaseHelper.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
-            pstmt.setString(2, username);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.err.println("Error during SQL query: " + e.getMessage());
+
+        // If the user has failed 5 times, and the last failed login is within 5 minutes,
+        // lock the account for 5 minutes
+        LocalDateTime allowedTime = LocalDateTime.now().minusMinutes(TIMEOUT);
+        if ((attempts+1) >= MAX_ATTEMPTS && lastFailedLogin.toLocalDateTime().isAfter(allowedTime)) {
+            lockAccount(username);
+        } else {
+            // If the user has failed less than 5 times,
+            // update the failed attempts and last failed login
+            try (Connection conn = DatabaseHelper.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+                pstmt.setString(2, username);
+                pstmt.executeUpdate();
+            } catch (SQLException e) {
+                System.err.println("Error during SQL query: " + e.getMessage());
+            }
         }
     }
 
@@ -151,7 +175,9 @@ public class UserAuthentication {
      * A function to reset the failed attempts of a user in the database.
      */
     private static void resetFailedAttempts(String username) {
-        String sql = "UPDATE users SET failed_attempts = 0 WHERE username = ?";
+        String sql = "UPDATE users " +
+                     "SET failed_attempts = 0, last_failed_login = NULL, lockout_until = NULL " +
+                     "WHERE username = ?";
         try (Connection conn = DatabaseHelper.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);

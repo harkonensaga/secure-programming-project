@@ -21,6 +21,7 @@ public class DatabaseHelper {
         }
         return connection;
     }
+    
 
     /*
      * A function to initialize the user database.
@@ -28,9 +29,9 @@ public class DatabaseHelper {
     public static void initializeDatabase() {
         String sql1 = "CREATE TABLE IF NOT EXISTS users (" +
                      "id                INTEGER PRIMARY KEY AUTOINCREMENT," +
-                     "username          TEXT UNIQUE NOT NULL," +
-                     "password_hash     TEXT NOT NULL," +
-                     "salt              TEXT NOT NULL," +
+                     "username          VARCHAR(255) UNIQUE NOT NULL," +
+                     "password_hash     VARCHAR(255) NOT NULL," +
+                     "salt              VARCHAR(255) NOT NULL," +
                      "failed_attempts   INTEGER DEFAULT 0," +
                      "last_failed_login TIMESTAMP DEFAULT NULL," +
                      "lockout_until     TIMESTAMP DEFAULT NULL" +
@@ -39,11 +40,15 @@ public class DatabaseHelper {
         String sql2 = "CREATE TABLE IF NOT EXISTS credentials (" +
                       "id            INTEGER PRIMARY KEY AUTOINCREMENT," +
                       "user_id       INTEGER NOT NULL," +
-                      "site_name     TEXT NOT NULL," +
-                      "site_username TEXT NOT NULL," +
-                      "site_password TEXT NOT NULL," +
+                      "site_name     VARCHAR(255) NOT NULL," +
+                      "site_username VARCHAR(255) NOT NULL," +
+                      "site_password VARCHAR(255) NOT NULL," +
                       "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
                       ");";
+
+        // String sql1 = "DROP TABLE IF EXISTS users;";
+        // String sql2 = "DROP TABLE IF EXISTS credentials;";
+        
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("PRAGMA foreign_keys = ON;");
             stmt.execute(sql1);
