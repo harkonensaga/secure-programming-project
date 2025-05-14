@@ -81,7 +81,7 @@ public class App extends Application {
                 boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
                                                                         passField.getText().toCharArray());
                 if (isSuccesful) mainScene();
-                else errorField.setText("Login failed.");
+                else errorField.setText("Invalid login credentials. Please try again.");
             }
         });
 
@@ -128,7 +128,7 @@ public class App extends Application {
                 boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(),
                                                                       password.toCharArray());
                 if (isSuccesful) loginScene();
-                else errorField.setText("User registration failed. Please try a different username");
+                else errorField.setText("User registration failed.");
             }
         });
 
