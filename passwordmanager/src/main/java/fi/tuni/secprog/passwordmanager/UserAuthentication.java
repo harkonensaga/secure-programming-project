@@ -27,6 +27,21 @@ public class UserAuthentication {
     }
 
     /*
+     * A function to check the password strength.
+     * Returns null if the password is strong enough, otherwise returns
+     * a string with the error message.
+     */
+    public static String checkPasswordStrenth(String password) {
+        if (password.length() < 8) {
+            return "Password must be at least 8 characters long.";
+        } else if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
+            return ("Password must include both lower and uppercase letters" +
+                    "and at least one number and special character.");
+        }
+        return null;
+    }
+
+    /*
      * A function to check is such user exists in the database.
      */
     public static boolean userExists(String username) {
@@ -69,9 +84,8 @@ public class UserAuthentication {
      * A function to authenticate a user.
      */
     public static boolean authenticateUser(String username, char[] password) {
-        if (!userExists(username)) {
-            return false;
-        }
+        if (!userExists(username)) return false;
+
         String sql = "SELECT id, password_hash, salt, failed_attempts, last_failed_login " +
                      "FROM users " +
                      "WHERE username = ?";
@@ -85,17 +99,17 @@ public class UserAuthentication {
             Integer attempts = rs.getInt("failed_attempts");
             Timestamp lastFailedLogin = rs.getTimestamp("last_failed_login");
 
-            // If the password is correct, set the user_id and save the encryption key
-            if (BCrypt.checkpw(new String(password), hashedPassword)) {
-                user_id = rs.getInt("id");
-                AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
-                // Clear the password from memory after use
-                java.util.Arrays.fill(password, ' ');
-                resetFailedAttempts(username);
-                return true;
-            } else {
+            // If the password is incorrect, update the failed attempts
+            if (!BCrypt.checkpw(new String(password), hashedPassword)) {
                 updateFailedAttempts(username, attempts, lastFailedLogin);
+                return false;
             }
+            user_id = rs.getInt("id");
+            AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
+            // Clear the password from memory after use
+            java.util.Arrays.fill(password, ' ');
+            resetFailedAttempts(username);
+            return true;
         } catch (SQLException e) {
             System.err.println("Error during authentication: " + e.getMessage());
         } catch (Exception e) {
@@ -117,9 +131,8 @@ public class UserAuthentication {
      * A function to register a new user to the database.
      */
     public static boolean registerUser(String username, char[] password) {
-        if (userExists(username)) {
-            return false;
-        }
+        if (userExists(username)) return false;
+
         String sql = "INSERT INTO users (username, password_hash, salt) VALUES (?, ?, ?)";
         
         String hashedPassword = BCrypt.hashpw(new String(password), BCrypt.gensalt(12));

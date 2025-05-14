@@ -79,11 +79,8 @@ public class App extends Application {
             } else {
                 boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
                                                                         passField.getText().toCharArray());
-                if (isSuccesful) {
-                    mainScene();
-                } else {
-                    errorField.setText("Login failed.");
-                }
+                if (isSuccesful) mainScene();
+                else errorField.setText("Login failed.");
             }
         });
 
@@ -114,25 +111,23 @@ public class App extends Application {
 
         Button signinBtn = createBigBtn("Sign In");
         signinBtn.setOnAction(e -> {
+            // Check if the password is strong enough
+            String password = passField.getText();
+            String passwordStrength = UserAuthentication.checkPasswordStrenth(password);
+
             // Check if the fields are empty, and if the password is valid
-            if (passField.getText().length() < 8) {
-                errorField.setText("Password must be at least 8 characters long.");
-            } else if (!passField.getText().matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
-                errorField.setText("Password must include both lower and uppercase letters" +
-                                   "and at least one number and special character.");
-            } else if (usernameField.getText().trim().isEmpty()) {
+            if (usernameField.getText().trim().isEmpty()) {
                 errorField.setText("Please fill in all fields.");
+            } else if (passwordStrength != null) {
+                errorField.setText(passwordStrength);
             } else if (!passField.getText().equals(passRepetitionField.getText())) {
                 errorField.setText("Passwords don't match.");
             } else {
                 // Register the user
                 boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(),
-                                                                      passField.getText().toCharArray());
-                if (isSuccesful) {
-                    loginScene();
-                } else {
-                    errorField.setText("User registration failed. Please try a different username");
-                }
+                                                                      password.toCharArray());
+                if (isSuccesful) loginScene();
+                else errorField.setText("User registration failed. Please try a different username");
             }
         });
 
@@ -152,7 +147,8 @@ public class App extends Application {
     }
 
     /*
-     * Creates the main scene when logged in
+     * Creates the main scene when logged in, where user can either view their keys
+     * or add a new key.
      */
     private void mainScene() {
         // Create buttons for keys and adding a key
@@ -169,8 +165,9 @@ public class App extends Application {
     }
 
     /*
-     * Creates the scene where the credentials are shown. Website name and
-     * username are shown, and the password can be copied to clipboard.
+     * Creates the scene where the credentials are shown.
+     * Website name and username are shown, and the password can be
+     * copied to clipboard.
      */
     private void keysScene() {
         // Create a list of keys and present them in a VBox with headers
@@ -186,9 +183,9 @@ public class App extends Application {
                                        passwordHeader, createHeaderLabel(""));
         keysVBox.getChildren().addAll(headerBox);
 
-        for (String website : PasswordManager.getWebsites()) {
+        for (String website : ManageCredentials.getWebsites()) {
             // Get the credentials for the website
-            List<String> credentials = PasswordManager.getCredentials(website);
+            List<String> credentials = ManageCredentials.getCredentials(website);
             if (credentials == null) {
                 errorField.setText("Error in getting the credentials.");
                 continue;
@@ -197,8 +194,7 @@ public class App extends Application {
             // Create a button to copy the password to clipboard
             Button copyPasswordBtn = createSmallBtn("Copy");
             copyPasswordBtn.setOnAction(e -> {
-                String password = credentials.get(1);
-                StringSelection stringSelection = new StringSelection(password);
+                StringSelection stringSelection = new StringSelection(credentials.get(1));
                 Toolkit.getDefaultToolkit().getSystemClipboard().setContents(stringSelection, null);
 
                 // Clear clipboard after 10 seconds
@@ -254,16 +250,15 @@ public class App extends Application {
             String website = websiteField.getText();
             String username = usernameField.getText();
             String password = passField.getText();
-            if (website.trim().isEmpty() || username.trim().isEmpty() || password.trim().isEmpty()) {
+            String passwordStrength = UserAuthentication.checkPasswordStrenth(password);
+
+            if (website.trim().isEmpty() || username.trim().isEmpty()) {
                 errorField.setText("Please fill in all fields.");
-            } else if (password.length() < 8) {
-                errorField.setText("Password must be at least 8 characters long.");
-            } else if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
-                errorField.setText("Password must include both lower and uppercase letters" +
-                                   "and at least one number and special character.");
+            } else if (passwordStrength != null) {
+                errorField.setText(passwordStrength);
             } else {
                 // Add the key to the database
-                if (!PasswordManager.storeKey(website, username, password)) {
+                if (!ManageCredentials.storeKey(website, username, password)) {
                     errorField.setText("Failed to add the key.");
                 } else {
                     keysScene();
@@ -296,7 +291,7 @@ public class App extends Application {
     private void editKeyScene(String website) {
         Label errorField = createErrorLabel("");
         // Get the credentials for the website
-        List<String> credentials = PasswordManager.getCredentials(website);
+        List<String> credentials = ManageCredentials.getCredentials(website);
         // ERROR
         if (credentials == null) {
             errorField.setText("Error in getting the credentials.");
@@ -318,17 +313,18 @@ public class App extends Application {
         saveBtn.setOnAction(e -> {
             String username = usernameField.getText();
             String password = passField.getText();
+
+            // Check if the password is strong enough
+            String passwordStrength = UserAuthentication.checkPasswordStrenth(password);
+
             // Check if the fields are empty
             if (username.trim().isEmpty() || password.trim().isEmpty()) {
                 errorField.setText("Please fill in all fields.");
-            } else if (password.length() < 8) {
-                errorField.setText("Password must be at least 8 characters long.");
-            } else if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
-                errorField.setText("Password must include both lower and uppercase letters" +
-                                   "and at least one number and special character.");
+            } else if (passwordStrength != null) {
+                errorField.setText(passwordStrength);           
             } else {
                 // Update the credentials to the database
-                if (!PasswordManager.updateKey(website, username, password)) {
+                if (!ManageCredentials.updateKey(website, username, password)) {
                     errorField.setText("Failed to update the key.");
                 } else {
                     keysScene();
@@ -350,11 +346,8 @@ public class App extends Application {
             yesBtn.setOnAction(event -> {
                 confirmStage.close();
                 // Delete the key from the database
-                if (!PasswordManager.deleteKey(website)) {
-                    errorField.setText("Failed to delete the key.");
-                } else {
-                    keysScene();
-                }
+                if (!ManageCredentials.deleteKey(website)) errorField.setText("Failed to delete the key.");
+                else keysScene();
             });
 
             HBox btnBox = new HBox(20, noBtn, yesBtn);
@@ -400,7 +393,7 @@ public class App extends Application {
             } else if (length > 20) {
                 errorField.setText("Password length must be at most 20 characters.");
             } else {
-                passField.setText(PasswordManager.generatePassword(length));
+                passField.setText(ManageCredentials.generatePassword(length));
             }
         } catch (NumberFormatException ex) {
             errorField.setText("Please enter a valid number for password length.");

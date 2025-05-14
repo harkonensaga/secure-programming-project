@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-public class PasswordManager {
+public class ManageCredentials {
 
     private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -88,7 +88,8 @@ public class PasswordManager {
             pstmt.setInt(1, UserAuthentication.getUserId());
             pstmt.setString(2, siteName);
             ResultSet rs = pstmt.executeQuery();
-
+            
+            if (!rs.next()) return null;
             String username = AESUtil.decrypt(rs.getString("site_username"));
             String password = AESUtil.decrypt(rs.getString("site_password"));
             return List.of(username, password);
@@ -127,9 +128,7 @@ public class PasswordManager {
      */
     public static boolean storeKey(String siteName, String username, String password) {
         // Check if the user already has credentials for the site
-        if (doCredentialsExist(siteName)) {
-            return false;
-        }
+        if (doCredentialsExist(siteName)) return false;
 
         String sql2 = "INSERT INTO credentials " +
                       "(user_id, site_name, site_username, site_password) " +
