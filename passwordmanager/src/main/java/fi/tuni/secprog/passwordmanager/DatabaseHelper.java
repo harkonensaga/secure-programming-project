@@ -9,7 +9,8 @@ import java.sql.Statement;
  * A class to handle database connection and initialization.
  */
 public class DatabaseHelper {
-    private static final String DB_URL = "jdbc:sqlite:password_manager.db";
+    private static String DB_URL;
+    private static final String realDB_URL = "jdbc:sqlite:password_manager.db";
     private static Connection connection;
 
     /*
@@ -20,6 +21,14 @@ public class DatabaseHelper {
             connection = DriverManager.getConnection(DB_URL);
         }
         return connection;
+    }
+
+    public static void setRealDB() {
+        DB_URL = realDB_URL;
+    }
+
+    public static void setTestDB(String testDB) {
+        DB_URL = testDB;
     }
     
 
@@ -48,6 +57,8 @@ public class DatabaseHelper {
 
         // String sql1 = "DROP TABLE IF EXISTS users;";
         // String sql2 = "DROP TABLE IF EXISTS credentials;";
+
+        setRealDB();
         
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("PRAGMA foreign_keys = ON;");
