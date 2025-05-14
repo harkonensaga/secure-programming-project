@@ -17,7 +17,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-
+/*
+ * Test class for UserAuthentication class
+ * Test for user registration, login, password strength checking, account lockout,
+ */
 public class UserAuthenticationTest {
     private static File tempDbFile;
     private static Connection conn;
@@ -60,11 +63,19 @@ public class UserAuthenticationTest {
         if (tempDbFile.exists()) tempDbFile.delete();
     }
     
+    /**
+     * This method is called before each test method.
+     * It registers a user with the specified username and password.
+     */
     @Before
     public void setUp() {
         assertTrue(UserAuthentication.registerUser(username, password.toCharArray()));
     }
 
+    /**
+     * This method is called after each test method.
+     * It deletes the user from the database.
+     */
     @After
     public void tearDown() {
         String sql = "DELETE FROM users WHERE username = ?";
@@ -78,6 +89,10 @@ public class UserAuthenticationTest {
         }
     }
 
+    /**
+     * Test for password strength checking.
+     * This test checks if the password strength checking function works correctly.
+     */
     @Test
     public void testPasswordStrength() {
         String shortPassword = "Pass123";
@@ -90,12 +105,18 @@ public class UserAuthenticationTest {
         assertNull(UserAuthentication.checkPasswordStrenth(veryStrongPassword));
     }
 
+    /**
+     * Test for registering a new user with an existing username.
+     */
     @Test
     public void registeringWithExistingUsername() throws Exception {
         String anotherPassword = "Password456";
         assertFalse(UserAuthentication.registerUser(username, anotherPassword.toCharArray()));
     }
 
+    /**
+     * Test for logging in a user. Test also userId management.
+     */
     @Test
     public void loginUser() throws Exception {
         assertTrue(UserAuthentication.userExists(username));
@@ -109,6 +130,9 @@ public class UserAuthenticationTest {
         assertFalse(UserAuthentication.authenticateUser(username, wrongPassword.toCharArray()));
     }
 
+    /**
+     * Test for account lockout after multiple failed login attempts.
+     */
     @Test
     public void testLockAccount() throws Exception {
         assertFalse(UserAuthentication.isAccountLocked(username));
@@ -120,6 +144,9 @@ public class UserAuthenticationTest {
         assertTrue(UserAuthentication.isAccountLocked(username));
     }
 
+    /**
+     * Test for SQL injection vulnerability.
+     */
     @Test
     public void testSQLInjection() throws Exception {
         String maliciousUsername1 = "' DROP TABLE users; --";

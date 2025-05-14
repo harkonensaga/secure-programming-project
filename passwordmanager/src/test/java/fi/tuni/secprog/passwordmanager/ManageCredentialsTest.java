@@ -22,6 +22,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 
+/*
+ * Test class for ManageCredentials class
+ */
 public class ManageCredentialsTest {
     private static File tempDbFile;
     private static Connection conn;
@@ -64,12 +67,20 @@ public class ManageCredentialsTest {
         if (tempDbFile.exists()) tempDbFile.delete();
     }
     
+    /**
+     * This method is called before each test method.
+     * It registers a user and authenticates them.
+     */
     @Before
     public void setUp() {
         assertTrue(UserAuthentication.registerUser(username, password.toCharArray()));
         assertTrue(UserAuthentication.authenticateUser(username, password.toCharArray()));
     }
 
+    /**
+     * This method is called after each test method.
+     * It deletes the user from the database.
+     */
     @After
     public void tearDown() {
         String sql = "DELETE FROM users WHERE username = ?";
@@ -83,6 +94,9 @@ public class ManageCredentialsTest {
         }
     }
 
+    /*
+     * Test for strong password generation.
+     */
     @Test
     public void testGeneratePass() {
         String generatedPass1 = ManageCredentials.generatePassword(8);
@@ -96,6 +110,9 @@ public class ManageCredentialsTest {
         assertTrue(generatedPass2.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$"));
     }
 
+    /*
+     * Test for storing a key correctly in the database.
+     */
     @Test
     public void testStoreKey() {
         String siteName = "example.com";
@@ -107,6 +124,9 @@ public class ManageCredentialsTest {
         assertEquals(credentials.get(1), password);
     }
 
+    /*
+     * Test for updating a key correctly in the database.
+     */
     @Test
     public void testUpdateKey() {
         String siteName = "example.com";
@@ -121,6 +141,9 @@ public class ManageCredentialsTest {
         assertEquals(credentials.get(1), newPassword);
     }
 
+    /*
+     * Test for deleting a key correctly from the database.
+     */
     @Test
     public void testDeleteKey() {
         String siteName = "example.com";
@@ -132,6 +155,9 @@ public class ManageCredentialsTest {
         assertNull(credentials);
     }
 
+    /*
+     * Test for getting all websites stored in the database for the user.
+     */
     @Test
     public void testGetCWebsites() {
         assertTrue(ManageCredentials.getWebsites().isEmpty());
@@ -147,5 +173,16 @@ public class ManageCredentialsTest {
         assertEquals(websites.size(), 2);
         assertTrue(websites.contains(siteName1));
         assertTrue(websites.contains(siteName2));
+    }
+
+    /*
+     * Test for handling a non-existent site.
+     */
+    @Test
+    public void testForNonexistentSite() {
+        List<String> credentials = ManageCredentials.getCredentials("nonexistent.com");
+        assertNull(credentials);
+        assertFalse(ManageCredentials.updateKey("nonexistent.com", "user", "pass"));
+        assertFalse(ManageCredentials.deleteKey("nonexistent.com"));
     }
 }
