@@ -10,6 +10,10 @@ import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 
+/*
+ * This class provides methods for AES encryption and decryption.
+ * It uses AES-256 encryption with GCM mode for authenticated encryption.
+ */
 public class AESUtil {
     private static final int KEY_LENGTH = 256; // AES-256 key
     private static final int ITERATIONS = 100_000;

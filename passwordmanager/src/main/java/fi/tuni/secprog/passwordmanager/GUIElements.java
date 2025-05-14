@@ -9,7 +9,10 @@ import javafx.scene.layout.VBox;
 import java.io.File;
 import javafx.geometry.Pos;
 
-
+/*
+ * This class contains methods to create GUI elements for the password manager application.
+ * It includes methods to create buttons, labels, and text fields with specific styles.
+ */
 public class GUIElements {
 
     private static final String btnColor = "#76BCBC";
@@ -122,7 +125,7 @@ public class GUIElements {
             icon.setFitHeight(150);
             return icon;
         } catch (Exception e) {
-            System.out.println("Error: Can't open icon picture.");
+            System.err.println("Error: Can't open icon picture.");
             return null;
         }
     }

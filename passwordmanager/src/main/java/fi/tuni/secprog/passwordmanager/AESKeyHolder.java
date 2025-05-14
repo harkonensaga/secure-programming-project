@@ -2,6 +2,9 @@ package fi.tuni.secprog.passwordmanager;
 
 import javax.crypto.spec.SecretKeySpec;
 
+/*
+ * This class is used to store and retrieve the AES key used for encryption and decryption.
+ */
 public class AESKeyHolder {
     private static SecretKeySpec aesKey;
 

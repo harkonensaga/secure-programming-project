@@ -55,11 +55,7 @@ public class DatabaseHelper {
                       "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
                       ");";
 
-        // String sql1 = "DROP TABLE IF EXISTS users;";
-        // String sql2 = "DROP TABLE IF EXISTS credentials;";
-
         setRealDB();
-        
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("PRAGMA foreign_keys = ON;");
             stmt.execute(sql1);

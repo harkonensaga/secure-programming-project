@@ -24,7 +24,8 @@ import static fi.tuni.secprog.passwordmanager.GUIElements.*;
 
 
 /**
- * Password manager application
+ * Password manager application.
+ * This class handles the layout and user interactions.
  */
 public class App extends Application {
     private Stage stage;
@@ -388,6 +389,7 @@ public class App extends Application {
     private void generatePassword(TextField passLength, PasswordField passField, Label errorField) {
         try {
             int length = Integer.parseInt(passLength.getText());
+            passField.setText("");
             if (length < 8) {
                 errorField.setText("Password length must be at least 8 characters.");
             } else if (length > 20) {

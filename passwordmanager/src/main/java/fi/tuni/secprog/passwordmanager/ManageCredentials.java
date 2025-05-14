@@ -7,6 +7,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+/*
+ * This class contains methods to manage the credentials of the user.
+ * It includes methods to generate a secure password, store, retrieve, update, and delete credentials.
+ */
 public class ManageCredentials {
 
     private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
