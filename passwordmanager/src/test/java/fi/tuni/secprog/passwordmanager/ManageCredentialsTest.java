@@ -9,6 +9,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -20,6 +21,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mindrot.jbcrypt.BCrypt;
 
 
 /*
@@ -46,6 +48,7 @@ public class ManageCredentialsTest {
                     "id                INTEGER PRIMARY KEY AUTOINCREMENT," +
                     "username          VARCHAR(255) UNIQUE NOT NULL," +
                     "password_hash     VARCHAR(255) NOT NULL," +
+                    "totp_secret       VARCHAR(255) NOT NULL," +
                     "salt              VARCHAR(255) NOT NULL," +
                     "failed_attempts   INTEGER DEFAULT 0," +
                     "last_failed_login TIMESTAMP DEFAULT NULL," +
@@ -72,9 +75,27 @@ public class ManageCredentialsTest {
      * It registers a user and authenticates them.
      */
     @Before
-    public void setUp() {
-        assertTrue(UserAuthentication.registerUser(username, password.toCharArray()));
-        assertTrue(UserAuthentication.authenticateUser(username, password.toCharArray()));
+    public void setUp() throws NoSuchAlgorithmException {
+        String sql = "INSERT INTO users (username, password_hash, totp_secret, salt) VALUES (?, ?, ?, ?)";
+        
+        // Connect to the database and insert the new user
+        try (Connection conn = DatabaseHelper.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            String hashedPassword = BCrypt.hashpw(new String(password), BCrypt.gensalt(12));
+            String salt = AESUtil.generateSalt();
+            AESKeyHolder.storeKey(AESUtil.deriveKey(password.toCharArray(), salt));
+            String encryptedTOTP = AESUtil.encrypt(TOTPUtil.generateSecretKey());
+    
+            pstmt.setString(1, username);
+            pstmt.setString(2, hashedPassword);
+            pstmt.setString(3, encryptedTOTP);
+            pstmt.setString(4, salt);
+            pstmt.executeUpdate();
+            
+            UserAuthentication.setUserId(1);
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+        }
     }
 
     /**
@@ -83,11 +104,14 @@ public class ManageCredentialsTest {
      */
     @After
     public void tearDown() {
-        String sql = "DELETE FROM users WHERE username = ?";
+        String sql1 = "DELETE FROM users WHERE username = ?";
+        String sql2 = "DELETE FROM credentials WHERE user_id = 1";
         try (Connection conn = DatabaseHelper.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql1)) {
             pstmt.setString(1, username);
             pstmt.executeUpdate();
+            Statement stmt = conn.createStatement();
+            stmt.execute(sql2);
             assertFalse(UserAuthentication.userExists(username));
         } catch (SQLException e) {
             System.err.println("Error during SQL query: " + e.getMessage());

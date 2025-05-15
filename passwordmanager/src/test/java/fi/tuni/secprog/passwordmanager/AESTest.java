@@ -2,6 +2,7 @@ package fi.tuni.secprog.passwordmanager;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -23,7 +24,7 @@ public class AESTest {
         AESKeyHolder.storeKey(key);
         assertEquals(key, AESKeyHolder.getKey());
         AESKeyHolder.clearKey();
-        assertEquals(null, AESKeyHolder.getKey());
+        assertNull(AESKeyHolder.getKey());
     }
 
     /**

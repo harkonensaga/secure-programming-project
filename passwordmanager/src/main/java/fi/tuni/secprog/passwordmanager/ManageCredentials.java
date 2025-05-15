@@ -141,10 +141,12 @@ public class ManageCredentials {
     
         try (Connection conn = DatabaseHelper.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql2)) {
+                System.out.println("Stage 1");
 
             // Encrypt the credentials before storing them
             String encryptedUsername = AESUtil.encrypt(username);
             String encryptedPass = AESUtil.encrypt(password);
+                System.out.println("Stage 2");
             pstmt.setInt(1, UserAuthentication.getUserId());
             pstmt.setString(2, siteName);
             pstmt.setString(3, encryptedUsername);
@@ -152,6 +154,7 @@ public class ManageCredentials {
 
             // Execute the query and return true if the update was successful
             int affectedRows = pstmt.executeUpdate();
+                System.out.println(affectedRows > 0);
             return affectedRows > 0;
         } catch (SQLException e) {
             System.err.println("Error in storing the key: " + e.getMessage());

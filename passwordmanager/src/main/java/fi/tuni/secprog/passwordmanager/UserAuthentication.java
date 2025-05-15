@@ -1,5 +1,6 @@
 package fi.tuni.secprog.passwordmanager;
 
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,6 +10,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 
 import org.mindrot.jbcrypt.BCrypt;
+
+import javafx.scene.image.Image;
 
 /*
  * A class to handle user authentication and registration.
@@ -24,6 +27,10 @@ public class UserAuthentication {
      */
     public static int getUserId() {
         return user_id;
+    }
+
+    public static void setUserId(int id) {
+        user_id = id;
     }
 
     /*
@@ -86,7 +93,7 @@ public class UserAuthentication {
     public static boolean authenticateUser(String username, char[] password) {
         if (!userExists(username)) return false;
 
-        String sql = "SELECT id, password_hash, salt, failed_attempts, last_failed_login " +
+        String sql = "SELECT password_hash, failed_attempts, last_failed_login " +
                      "FROM users " +
                      "WHERE username = ?";
 
@@ -104,17 +111,45 @@ public class UserAuthentication {
                 updateFailedAttempts(username, attempts, lastFailedLogin);
                 return false;
             }
-            user_id = rs.getInt("id");
-            AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
             // Clear the password from memory after use
             java.util.Arrays.fill(password, ' ');
-            resetFailedAttempts(username);
             return true;
         } catch (SQLException e) {
             System.err.println("Error during authentication: " + e.getMessage());
-        } catch (Exception e) {
-            System.err.println("Error during key derivation: " + e.getMessage());
         }
+        return false;
+    }
+
+    /*
+     * A function to verify the TOTP code.
+     */
+    public static boolean verifyTOTP(String username, char[] password, String userInput) {
+        String sql = "SELECT id, totp_secret, salt, failed_attempts, last_failed_login " +
+                     "FROM users " +
+                     "WHERE username = ?";
+
+        try (Connection conn = DatabaseHelper.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            
+            AESKeyHolder.storeKey(AESUtil.deriveKey(password, rs.getString("salt")));
+            String TOTPSecret = AESUtil.decrypt(rs.getString("totp_secret"));
+            Integer attempts = rs.getInt("failed_attempts");
+            Timestamp lastFailedLogin = rs.getTimestamp("last_failed_login");
+
+            if (!TOTPUtil.verifyTOTP(userInput, TOTPSecret)) {
+                updateFailedAttempts(username, attempts, lastFailedLogin);
+                AESKeyHolder.clearKey();
+                return false;
+            }
+            setUserId(rs.getInt("id"));
+            resetFailedAttempts(username);
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error during TOTP verification: " + e.getMessage());
+        }
+        AESKeyHolder.clearKey();
         return false;
     }
 
@@ -124,37 +159,50 @@ public class UserAuthentication {
     public static void logoutUser() {
         // Clear the AES key and user id
         AESKeyHolder.clearKey();
-        user_id = 0;
+        setUserId(0);
     }
 
     /*
      * A function to register a new user to the database.
      */
-    public static boolean registerUser(String username, char[] password) {
-        if (userExists(username)) return false;
+    public static Image registerUser(String username, char[] password) {
+        if (userExists(username)) return null;
 
-        String sql = "INSERT INTO users (username, password_hash, salt) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO users (username, password_hash, totp_secret, salt) VALUES (?, ?, ?, ?)";
         
-        String hashedPassword = BCrypt.hashpw(new String(password), BCrypt.gensalt(12));
-        String salt = AESUtil.generateSalt();
-        // Clear the password from memory after use
-        java.util.Arrays.fill(password, ' ');
-    
         // Connect to the database and insert the new user
         try (Connection conn = DatabaseHelper.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            String hashedPassword = BCrypt.hashpw(new String(password), BCrypt.gensalt(12));
+            String salt = AESUtil.generateSalt();
+            AESKeyHolder.storeKey(AESUtil.deriveKey(password, salt));
+            String TOTPSecret = TOTPUtil.generateSecretKey();
+            String encryptedTOTP = AESUtil.encrypt(TOTPSecret);
+            AESKeyHolder.clearKey();
+            
+            // Clear the password from memory after use
+            java.util.Arrays.fill(password, ' ');
     
             pstmt.setString(1, username);
             pstmt.setString(2, hashedPassword);
-            pstmt.setString(3, salt);
+            pstmt.setString(3, encryptedTOTP);
+            pstmt.setString(4, salt);
     
             // Execute the query and return true if the query was successful
             int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
+            if (affectedRows > 0) {
+                // Generate the TQR code for the TOTP secret key
+                String URL = TOTPUtil.getTOTPAuthURL(username, "PasswordManager", TOTPSecret);
+                return TOTPUtil.generateQRCode(URL);
+            }
         } catch (SQLException e) {
             System.err.println("Error during registration: " + e.getMessage());
+        } catch (NoSuchAlgorithmException e) {
+            System.err.println("Error generating TOTP secret: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error in encrypting the TOTP secret: " + e.getMessage());
         }
-        return false;
+        return null;
     }
     
     /*

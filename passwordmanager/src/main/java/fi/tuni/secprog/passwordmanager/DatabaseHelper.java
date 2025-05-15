@@ -40,6 +40,7 @@ public class DatabaseHelper {
                      "id                INTEGER PRIMARY KEY AUTOINCREMENT," +
                      "username          VARCHAR(255) UNIQUE NOT NULL," +
                      "password_hash     VARCHAR(255) NOT NULL," +
+                     "totp_secret       VARCHAR(255) NOT NULL," +
                      "salt              VARCHAR(255) NOT NULL," +
                      "failed_attempts   INTEGER DEFAULT 0," +
                      "last_failed_login TIMESTAMP DEFAULT NULL," +

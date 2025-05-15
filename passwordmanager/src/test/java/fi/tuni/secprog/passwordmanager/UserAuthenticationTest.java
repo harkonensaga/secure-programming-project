@@ -42,6 +42,7 @@ public class UserAuthenticationTest {
                     "id                INTEGER PRIMARY KEY AUTOINCREMENT," +
                     "username          VARCHAR(255) UNIQUE NOT NULL," +
                     "password_hash     VARCHAR(255) NOT NULL," +
+                    "totp_secret       VARCHAR(255) NOT NULL," +
                     "salt              VARCHAR(255) NOT NULL," +
                     "failed_attempts   INTEGER DEFAULT 0," +
                     "last_failed_login TIMESTAMP DEFAULT NULL," +
@@ -69,7 +70,7 @@ public class UserAuthenticationTest {
      */
     @Before
     public void setUp() {
-        assertTrue(UserAuthentication.registerUser(username, password.toCharArray()));
+        assertNotNull(UserAuthentication.registerUser(username, password.toCharArray()));
     }
 
     /**
@@ -111,7 +112,7 @@ public class UserAuthenticationTest {
     @Test
     public void registeringWithExistingUsername() throws Exception {
         String anotherPassword = "Password456";
-        assertFalse(UserAuthentication.registerUser(username, anotherPassword.toCharArray()));
+        assertNull(UserAuthentication.registerUser(username, anotherPassword.toCharArray()));
     }
 
     /**
@@ -122,9 +123,6 @@ public class UserAuthenticationTest {
         assertTrue(UserAuthentication.userExists(username));
         assertFalse(UserAuthentication.isAccountLocked(username));
         assertTrue(UserAuthentication.authenticateUser(username, password.toCharArray()));
-        assertTrue(UserAuthentication.getUserId() > 0);
-        UserAuthentication.logoutUser();
-        assertTrue(UserAuthentication.getUserId() == 0);
 
         String wrongPassword = "Password456";
         assertFalse(UserAuthentication.authenticateUser(username, wrongPassword.toCharArray()));

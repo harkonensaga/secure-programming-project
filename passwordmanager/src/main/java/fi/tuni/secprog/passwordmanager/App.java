@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -68,20 +69,46 @@ public class App extends Application {
      * Creates the login scene
      */
     private void loginScene() {
-        /// Create text fields for username and password
         TextField usernameField = new TextField();
         PasswordField passField = new PasswordField();
         Label errorField = createErrorLabel("");
 
+        // Box for showing the input field for TOTP code
+        VBox TOTPcodeBox = new VBox(20);
+        TOTPcodeBox.setAlignment(Pos.CENTER);
+
         Button loginBtn = createBigBtn("Log In");
         loginBtn.setOnAction(e -> {
+            errorField.setText("");
+            // Check if account is locked
             if (UserAuthentication.isAccountLocked(usernameField.getText())) {
                 errorField.setText("Account is locked. Try again later.");
             } else {
+                // Try to authenticate the user with username and password
                 boolean isSuccesful = UserAuthentication.authenticateUser(usernameField.getText(),
                                                                         passField.getText().toCharArray());
-                if (isSuccesful) mainScene();
-                else errorField.setText("Invalid login credentials. Please try again.");
+                if (isSuccesful)  {
+                    // Check user with TOTP
+                    TextField TOTPcodeField = new TextField();
+                    Button verifyBtn = createBigBtn("Verify");
+                    TOTPcodeBox.getChildren().addAll(createLabeledField("TOTP code:", TOTPcodeField),
+                                                    verifyBtn);
+                    root.getChildren().remove(loginBtn);
+                    verifyBtn.setOnAction(ev ->  {
+                        boolean isTOTPValid = UserAuthentication.verifyTOTP(usernameField.getText(),
+                                                                passField.getText().toCharArray(),
+                                                                TOTPcodeField.getText());
+                        if (isTOTPValid) {
+                            mainScene();
+                        } else {
+                            errorField.setText("Invalid TOTP code. Please try again.");
+                            TOTPcodeBox.getChildren().clear();
+                            root.getChildren().add(loginBtn);
+                        }
+                    });
+                } else {
+                    errorField.setText("Invalid login credentials. Please try again.");
+                }
             }
         });
 
@@ -96,7 +123,8 @@ public class App extends Application {
             createLabeledField("Username:", usernameField),
             createLabeledField("Password:", passField),
             errorField,
-            loginBtn);
+            loginBtn,
+            TOTPcodeBox);
     }
 
     /*
@@ -104,14 +132,17 @@ public class App extends Application {
      */
     private void signInScene() {
         TextField usernameField = new TextField();
-        
-        // Use PasswordField for password to hide input text
         PasswordField passField = new PasswordField();
         PasswordField passRepetitionField = new PasswordField();
         Label errorField = createErrorLabel("");
+        
+        // Box for showing the QR code and input field for TOTP code
+        VBox TOTPcodeBox = new VBox(20);
+        TOTPcodeBox.setAlignment(Pos.CENTER);
 
         Button signinBtn = createBigBtn("Sign In");
         signinBtn.setOnAction(e -> {
+            errorField.setText("");
             // Check if the password is strong enough
             String password = passField.getText();
             String passwordStrength = UserAuthentication.checkPasswordStrenth(password);
@@ -125,10 +156,32 @@ public class App extends Application {
                 errorField.setText("Passwords don't match.");
             } else {
                 // Register the user
-                boolean isSuccesful = UserAuthentication.registerUser(usernameField.getText(),
+                Image QRcode = UserAuthentication.registerUser(usernameField.getText(),
                                                                       password.toCharArray());
-                if (isSuccesful) loginScene();
-                else errorField.setText("User registration failed.");
+                if (QRcode != null) {
+                    // Check user with TOTP
+                    TextField TOTPcodeField = new TextField();
+                    Button verifyBtn = createBigBtn("Verify");
+                    ImageView QRcodeIV = new ImageView(QRcode);
+                    QRcodeIV.setFitWidth(150);
+                    QRcodeIV.setFitHeight(150);
+                    TOTPcodeBox.getChildren().addAll(QRcodeIV,
+                                                    createLabeledField("TOTP code:", TOTPcodeField),
+                                                    verifyBtn);
+                    root.getChildren().remove(signinBtn);
+                    verifyBtn.setOnAction(ev ->  {
+                        boolean isTOTPValid = UserAuthentication.verifyTOTP(usernameField.getText(),
+                                                                passField.getText().toCharArray(),
+                                                                TOTPcodeField.getText());
+                        if (isTOTPValid) {
+                            mainScene();
+                        } else {
+                            errorField.setText("Invalid TOTP code. Please try again.");
+                            TOTPcodeBox.getChildren().clear();
+                            root.getChildren().add(signinBtn);
+                        }
+                    });
+                } else errorField.setText("User registration failed.");
             }
         });
 
@@ -144,7 +197,8 @@ public class App extends Application {
             createLabeledField("Password:", passField), 
             createLabeledField("Repeat Password:", passRepetitionField),
             errorField,
-            signinBtn);
+            signinBtn,
+            TOTPcodeBox);
     }
 
     /*
