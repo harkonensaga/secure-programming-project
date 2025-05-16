@@ -74,13 +74,11 @@ public class TOTPUtil {
         byte[] decodedKey = base32.decode(base32Secret);
         SecretKeySpec key = new SecretKeySpec(decodedKey, totp.getAlgorithm());
 
-        // Optional: allow +/-1 time window
-        int code = Integer.parseInt(userInput);
-        for (int i = -1; i <= 1; i++) {
-            Instant shiftedTime = now.plusSeconds(i * totp.getTimeStep().getSeconds());
-            if (totp.generateOneTimePassword(key, shiftedTime) == code) {
-                return true;
-            }
+        try {
+            int code = Integer.parseInt(userInput);
+            if (totp.generateOneTimePassword(key, now) == code) return true;
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid TOTP code format: " + e.getMessage());
         }
         return false;
     }

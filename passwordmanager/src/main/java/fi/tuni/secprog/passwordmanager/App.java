@@ -157,9 +157,9 @@ public class App extends Application {
             } else {
                 // Register the user
                 Image QRcode = UserAuthentication.registerUser(usernameField.getText(),
-                                                                      password.toCharArray());
+                                                            password.toCharArray());
                 if (QRcode != null) {
-                    // Check user with TOTP
+                    // Show the QR code and input field for TOTP code to the user
                     TextField TOTPcodeField = new TextField();
                     Button verifyBtn = createBigBtn("Verify");
                     ImageView QRcodeIV = new ImageView(QRcode);
@@ -169,6 +169,8 @@ public class App extends Application {
                                                     createLabeledField("TOTP code:", TOTPcodeField),
                                                     verifyBtn);
                     root.getChildren().remove(signinBtn);
+
+                    // Verify the TOTP code
                     verifyBtn.setOnAction(ev ->  {
                         boolean isTOTPValid = UserAuthentication.verifyTOTP(usernameField.getText(),
                                                                 passField.getText().toCharArray(),
